@@ -1,2 +1,32 @@
+# Security - NEVER commit these
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+encryption_key.txt
+.alerts-dev/
+.alerts-test/
+.alerts-prod/
+.env
+.env.*
+*.secret
+
+# Development files
 files/*
-e2e-tests/test-results
+.DS_Store
+.vscode/
+.idea/
+*.log
+*.tmp
+
+# E2E Test artifacts
+e2e-tests/test-results/
+e2e-tests/playwright-report/
+e2e-tests/node_modules/
+e2e-tests/.playwright/
+
+# Docker volumes and temporary files
+docker-data/
+tmp/
+*.pid
