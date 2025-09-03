@@ -76,6 +76,9 @@ Automated testing with clean database state and E2E browser tests.
 
 # E2E with specific pattern and workers
 ./bin/test/run_e2e_tests.sh -w 3 "T4"
+
+# Encryption key rotation test
+./bin/test/test_key_rotation.sh
 ```
 
 ---
