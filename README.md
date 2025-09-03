@@ -156,3 +156,12 @@ SESSION_TIMEOUT_MINUTES=30 ./bin/dev/startup.sh
 - Login screen protection for all routes
 - No environment variable bypasses
 
+---
+
+## 👥 Credits
+
+**Project by:** jsph  
+**Engineering Support:** Claude (Anthropic AI Assistant)
+
+Built with Elixir, Phoenix, Docker, and a focus on secure database monitoring patterns.
+
