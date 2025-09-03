@@ -2,6 +2,28 @@
 
 A Phoenix application for monitoring database data and generating alerts with encrypted data source credentials. Connect to multiple databases (MySQL, PostgreSQL), create alerts with custom SQL queries, and get notified when thresholds are exceeded. Features encrypted credential storage, master password protection, and full SSL/HTTPS support.
 
+## Screenshots
+
+### Data Source Management
+Securely manage multiple database connections with encrypted credentials:
+
+![Data Sources](screenshots/data-sources.png)
+
+### Alert Dashboard
+Monitor all your alerts with real-time status updates and context filtering:
+
+![Alerts Listing](screenshots/alerts-listing.png)
+
+### Alert Timeline & History
+Track alert changes and results over time with detailed diff visualization:
+
+![Alert Timeline](screenshots/alert-diff-story.png)
+
+### Alert Details & Monitoring
+View individual alert status, execution results, and downloadable CSV data:
+
+![Alert Detail](screenshots/alert-detail.png)
+
 ## Development Environment
 
 Local development with hot reload and debugging capabilities.
