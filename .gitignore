@@ -30,3 +30,8 @@ e2e-tests/.playwright/
 docker-data/
 tmp/
 *.pid
+
+# Development notes
+TODO.txt
+NOTES.txt
+*.todo
