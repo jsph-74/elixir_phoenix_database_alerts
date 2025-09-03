@@ -7,19 +7,36 @@ defmodule AlertsWeb.AlertController do
 
   def index(conn, params) do
     available_contexts = Alerts.Business.Alerts.contexts()
-    context = params["context"] || Enum.at(available_contexts, 0) || ""
-    alerts = Alerts.Business.Alerts.alerts_in_context(context, String.to_atom(params["order"] || "name"))
+    requested_context = params["context"]
+    
+    # Check if we need to redirect to a valid context
+    cond do
+      # Requested context doesn't exist and we have alternatives - redirect
+      requested_context != nil and requested_context not in available_contexts and available_contexts != [] ->
+        first_available = Enum.at(available_contexts, 0)
+        redirect(conn, to: ~p"/alerts?context=#{first_available}")
+      
+      # Normal flow - determine context and render
+      true ->
+        context = if requested_context in available_contexts do
+          requested_context
+        else
+          Enum.at(available_contexts, 0) || ""
+        end
+        
+        alerts = Alerts.Business.Alerts.alerts_in_context(context, String.to_atom(params["order"] || "name"))
 
-    render(
-      conn,
-      "index.html",
-      available_contexts:
-        ([context] ++ available_contexts)
-        |> Enum.uniq()
-        |> Enum.sort_by(&:string.lowercase/1, &</2),
-      context: context,
-      alerts: alerts
-    )
+        render(
+          conn,
+          "index.html",
+          available_contexts:
+            ([context] ++ available_contexts)
+            |> Enum.uniq()
+            |> Enum.sort_by(&:string.lowercase/1, &</2),
+          context: context,
+          alerts: alerts
+        )
+    end
   end
 
   def reboot(conn, params) do
