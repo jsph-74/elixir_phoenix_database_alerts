@@ -1,0 +1,1 @@
+- remember the entrypoint empty when you run scripts

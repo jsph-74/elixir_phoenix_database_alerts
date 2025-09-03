@@ -1,0 +1,4 @@
+FROM mysql:latest
+# remember to build the container
+RUN echo "[mysqld]" > /etc/mysql/conf.d/custom.cnf && echo "secure-file-priv='/data'" >> /etc/mysql/conf.d/custom.cnf
+EXPOSE 3306

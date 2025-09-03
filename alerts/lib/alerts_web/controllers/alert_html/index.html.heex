@@ -1,0 +1,151 @@
+<h1>
+  <%= link("Alerts", to: ~p"/alerts") %>
+  &rarr;
+  <em><%= @context %></em>
+</h1>
+
+<p>
+  Time right now:
+  <%= "Europe/Paris" |> Timex.now() |> Timex.format!("%Y-%m-%d %H:%M:%S", :strftime) %>
+  <small style="color: #666; margin-left: 10px;">(<%= Mix.env() %>)</small>
+</p>
+
+<div class="text-right hidden-print" style="margin-bottom: 20px;">
+  <form class="form-inline" method="post" action={~p"/alerts/run_all?context=#{@context}"} style="display: inline;">
+    <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+    <button class="btn" type="submit" style="border: 1px solid #ff6600; color: #ff6600; background: white; margin-right: 10px;">Run All Alerts</button>
+  </form>
+  
+  <%= link("Create alert", to: ~p"/alerts/new", class: "btn", style: "border: 1px solid #28a745; color: #28a745; background: white;") %>
+  
+  <form class="form-inline" method="post" action={~p"/alerts/reboot?context=#{@context}"} style="display: inline;">
+    <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+    <button class="btn" type="submit" style="border: 1px solid #007bff; color: #007bff; background: white;">Reboot jobs</button>
+  </form>
+</div>
+
+<%= if length(@alerts) > 0 do %>
+  <%= if length(@available_contexts) > 0 do %>
+    <ul class="nav nav-tabs">
+      <%= for context <- @available_contexts do %>
+        <li class={active_tab_class(context, @context)} role="presentation">
+          <%= link(context, to: ~p"/alerts?context=#{context}") %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <table class="table col-md-6 table-hover">
+    <thead>
+      <tr>
+        <th class="text-left">uuid</th>
+        <th class="text-left">
+          <%= link("name", to: ~p"/alerts?context=#{@context}&order=name", class: "sort") %>
+        </th>
+        <th class="text-left">
+          <%= link("data source", to: ~p"/alerts?context=#{@context}&order=data_source_id", class: "sort") %>
+        </th>
+        <th class="text-center" style="width: 80px;">
+          <%= link("results", to: ~p"/alerts?context=#{@context}&order=results_size", class: "sort") %>
+        </th>
+        <th class="text-center" style="width: 80px;">threshold</th>
+        <th class="text-center">
+          <%= link("status", to: ~p"/alerts?context=#{@context}&order=status", class: "sort") %>
+        </th>
+        <th class="text-center">
+          <%= link("schedule", to: ~p"/alerts?context=#{@context}&order=schedule", class: "sort") %>
+        </th>
+        <th class="text-center" style="width: 150px;">actions</th>
+        <th class="text-center" style="width: 180px;">dates</th>
+      </tr>
+    </thead>
+    <tbody>
+      <%= for alert <- @alerts do %>
+        <tr>
+          <td class="text-left" style="vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <span style="font-family: monospace;" title={alert.alert_public_id}>
+              <%= link(truncate_id(alert.alert_public_id), to: ~p"/alerts/#{alert.alert_public_id}") %>
+            </span>
+          </td>
+          <td class="text-left" style="vertical-align: middle;">
+            <div class="tooltip-container" style="display: inline-block;">
+              <%= link(alert.name, to: ~p"/alerts/#{alert.alert_public_id}") %>
+              <div class="custom-tooltip"><%= alert.description %></div>
+            </div>
+          </td>
+          <td class="text-left" style="vertical-align: middle;">
+            <%= render_source(alert.data_source) %>
+          </td>
+          <td class="text-center" style="vertical-align: middle; width: 80px;">
+            <%= render_total(alert.results_size) %>
+          </td>
+          <td class="text-center" style="vertical-align: middle; width: 80px;">
+            <%= render_total(alert.threshold) %>
+          </td>
+          <td class="text-center" style="vertical-align: middle;">
+            <%= render_status(alert) %>
+            <%= if alert.status not in ["needs refreshing", "never run"] do %>
+              <br>
+              <small>since <%= render_date_relative(alert.last_status_change) %></small>
+            <% end %>
+          </td>
+          <td class="text-center" style="vertical-align: middle;" nowrap="nowrap">
+            <%= render_schedule(alert) %>
+          </td>
+          <td class="text-center" style="vertical-align: middle; width: 150px;" nowrap="nowrap">
+            <!-- Run button -->
+            <form class="form-inline" method="post" action={~p"/alerts/run/#{alert.alert_public_id}"} style="display: inline; margin: 0;">
+              <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+              <button class="btn-icon btn-icon-primary" type="submit" title="Run alert">
+                <%= render_play_icon() %>
+              </button>
+            </form>
+            
+            <!-- History button -->
+            <%= link(to: ~p"/alerts/#{alert.alert_public_id}" <> "#query-history", class: "btn-icon btn-icon-info", title: "View history") do %>
+              <%= render_history(alert) %>
+            <% end %>
+            
+            <!-- Download button - always show -->
+            <%= if (alert.results_size || 0) > 0 do %>
+              <form class="form-inline" method="post" action={~p"/alerts/csv/#{alert.alert_public_id}"} style="display: inline; margin: 0;">
+                <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+                <button class="btn-icon btn-icon-success" type="submit" title="Download CSV">
+                  <%= render_download_icon() %>
+                </button>
+              </form>
+            <% else %>
+              <span class="btn-icon btn-icon-disabled" title={if alert.last_run, do: "No results to download", else: "Alert has never been run"}>
+                <%= render_download_icon() %>
+              </span>
+            <% end %>
+            
+            <!-- Edit and Delete buttons -->
+            <%= link(render_edit_icon(), to: ~p"/alerts/edit/#{alert.alert_public_id}", class: "btn-icon btn-icon-secondary", title: "Edit alert") %>
+            <%= link(render_delete_icon(), to: ~p"/alerts/#{alert.alert_public_id}", method: :delete, 
+                data: [confirm: "Really delete alert #{alert.name} (id: #{alert.alert_public_id})?"], 
+                class: "btn-icon btn-icon-danger", title: "Delete alert") %>
+          </td>
+          <td class="text-right text-nowrap" style="vertical-align: middle; width: 180px;">
+            <div>
+              <b><%= link("last run:", to: ~p"/alerts?context=#{@context}&order=last_run", class: "sort") %></b>
+              <%= render_date_relative(alert.last_run) %>
+            </div>
+            <div>
+              <b><%= link("created:", to: ~p"/alerts?context=#{@context}&order=created_at", class: "sort") %></b>
+              <%= render_date_relative(alert.created_at) %>
+            </div>
+            <div>
+              <b><%= link("updated:", to: ~p"/alerts?context=#{@context}&order=last_edited", class: "sort") %></b>
+              <%= render_date_relative(alert.last_edited) %>
+            </div>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <br>
+  <br>
+  <p class="lead">No alerts found</p>
+<% end %>

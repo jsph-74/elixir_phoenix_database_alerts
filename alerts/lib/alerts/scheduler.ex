@@ -1,0 +1,32 @@
+defmodule Alerts.Scheduler do
+  use Quantum, otp_app: :alerts
+  require Logger
+
+  @environment_blacklist [:test]
+
+  def init(opts) do
+    case Enum.member?(@environment_blacklist, Mix.env()) or IEx.started?() do
+      true ->
+        IO.inspect(opts)
+        opts
+
+      false ->
+        delete_all_jobs()
+        opts_with_jobs = get_startup_config(opts)
+        opts_with_jobs |> IO.inspect()
+        opts_with_jobs
+    end
+  end
+
+  def get_startup_config(opts) do
+    job_definition = Alerts.Business.Alerts.get_all_alert_jobs_config()
+    (opts |> List.delete(List.keyfind(opts, :jobs, 0))) ++ [jobs: job_definition]
+  end
+
+  def reboot_all_jobs() do
+    Alerts.Business.Alerts.reboot_all_jobs()
+    current_jobs = jobs()
+    current_jobs |> IO.inspect()
+    current_jobs
+  end
+end

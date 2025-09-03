@@ -1,0 +1,96 @@
+<h1>
+  <%= link("Alerts", to: ~p"/alerts") %>
+  &rarr;
+  <%= link("Data sources", to: ~p"/data_sources") %>
+  &rarr;
+  <em><%= @data_source.display_name %></em>
+</h1>
+
+<div class="text-right hidden-print" style="margin-bottom: 20px;">
+  <%= link(render_edit_icon(), to: ~p"/data_sources/#{@data_source}/edit", class: "btn-icon btn-icon-secondary", title: "Edit data source") %>
+  <%= link(render_test_icon(), to: ~p"/data_sources/#{@data_source}/test", method: :post, class: "btn-icon btn-icon-info", title: "Test connection") %>
+  
+  <%= if @alert_count == 0 do %>
+    <%= link(render_delete_icon(), 
+        to: ~p"/data_sources/#{@data_source}", 
+        method: :delete,
+        data: [confirm: "Are you sure you want to delete '#{@data_source.display_name}'? This action cannot be undone."],
+        class: "btn-icon btn-icon-danger", title: "Delete data source") %>
+  <% else %>
+    <span class="btn-icon btn-icon-disabled" title={"Cannot delete data source while #{@alert_count} alert(s) are using it"}>
+      <%= render_delete_icon() %>
+    </span>
+  <% end %>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <table class="table">
+      <tbody>
+        <tr>
+          <th class="text-right" style="vertical-align:middle;">Name</th>
+          <td><%= @data_source.name %></td>
+        </tr>
+        <tr>
+          <th class="text-right" style="vertical-align:middle;">Display Name</th>
+          <td><%= @data_source.display_name %></td>
+        </tr>
+        <tr>
+          <th class="text-right" style="vertical-align:middle;">Driver</th>
+          <td><%= @data_source.driver %></td>
+        </tr>
+        <tr>
+          <th class="text-right" style="vertical-align:middle;">Server</th>
+          <td><%= @data_source.server %></td>
+        </tr>
+        <tr>
+          <th class="text-right" style="vertical-align:middle;">Database</th>
+          <td><%= @data_source.database %></td>
+        </tr>
+        <tr>
+          <th class="text-right" style="vertical-align:middle;">Port</th>
+          <td><%= @data_source.port %></td>
+        </tr>
+        <tr>
+          <th class="text-right" style="vertical-align:middle;">Username</th>
+          <td><%= @data_source.username %></td>
+        </tr>
+        <tr>
+          <th class="text-right" style="vertical-align:middle;">Password</th>
+          <td><%= mask_password(@data_source.password) %></td>
+        </tr>
+        <tr>
+          <th class="text-right" style="vertical-align:middle;">Additional Parameters</th>
+          <td><%= format_additional_params(@data_source.additional_params) %></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  
+  <div class="col-md-4">
+    <table class="table">
+      <tbody>
+        <tr>
+          <th class="text-right" style="vertical-align:middle;">Alerts Using This Source</th>
+          <td>
+            <%= if @alert_count == 0 do %>
+              <span class="text-muted">No alerts</span>
+            <% else %>
+              <%= link("#{@alert_count} alert(s)", 
+                  to: ~p"/alerts?source=#{@data_source.name}", 
+                  class: "text-warning") %>
+            <% end %>
+          </td>
+        </tr>
+        <tr>
+          <th class="text-right" style="vertical-align:middle;">Created</th>
+          <td><%= @data_source.inserted_at |> AlertsWeb.Helpers.format_date_local() %></td>
+        </tr>
+        <tr>
+          <th class="text-right" style="vertical-align:middle;">Last Modified</th>
+          <td><%= @data_source.updated_at |> AlertsWeb.Helpers.format_date_local() %></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,63 @@
+<h1>
+  <%= link("Alerts", to: ~p"/alerts") %> 
+  &rarr; 
+  <em>Data sources</em>
+</h1>
+
+<div class="text-right hidden-print" style="margin-bottom: 20px;">
+  <%= link("Add Data Source", to: ~p"/data_sources/new", class: "btn", style: "border: 1px solid #28a745; color: #28a745; background: white;") %>
+</div>
+
+<%= if length(@data_sources) > 0 do %>
+  <div class="table-responsive">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Display Name</th>
+          <th>Type</th>
+          <th>Server</th>
+          <th>Database</th>
+          <th>Port</th>
+          <th>Usage</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= for data_source <- @data_sources do %>
+          <tr>
+            <td><%= link(data_source.name, to: ~p"/data_sources/#{data_source}") %></td>
+            <td><%= data_source.display_name %></td>
+            <td><%= data_source.driver %></td>
+            <td><%= data_source.server %></td>
+            <td><%= data_source.database %></td>
+            <td><%= data_source.port %></td>
+            <td><%= render_usage_count(data_source.name, @usage_stats) %></td>
+            <td class="text-nowrap">
+              <%= link(render_edit_icon(), to: ~p"/data_sources/#{data_source}/edit", class: "btn-icon btn-icon-secondary", title: "Edit data source") %>
+              <%= link(render_test_icon(), to: ~p"/data_sources/#{data_source}/test", 
+                  method: :post, 
+                  class: "btn-icon btn-icon-info", title: "Test connection") %>
+              
+              <%= if can_delete?(data_source.name, @usage_stats) do %>
+                <%= link(render_delete_icon(), 
+                    to: ~p"/data_sources/#{data_source}", 
+                    method: :delete,
+                    data: [confirm: "Are you sure you want to delete '#{data_source.display_name}'? This action cannot be undone."],
+                    class: "btn-icon btn-icon-danger", title: "Delete data source") %>
+              <% else %>
+                <span class="btn-icon btn-icon-disabled" title={"Cannot delete data source while #{Map.get(@usage_stats, data_source.name, 0)} alert(s) are using it"}>
+                  <%= render_delete_icon() %>
+                </span>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <br>
+  <br>
+  <p class="lead">No data sources found</p>
+<% end %>

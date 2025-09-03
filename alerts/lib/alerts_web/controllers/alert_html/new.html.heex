@@ -1,0 +1,94 @@
+<h1>
+  <%= link("Alerts", to: ~p"/alerts") %>
+  &rarr;
+  New Alert
+</h1>
+
+<div class="text-right hidden-print" style="margin-bottom: 20px;">
+  <%= link("Create Alert", to: "#", class: "btn action-bar-btn", id: "submit-btn", style: "border: 1px solid #28a745; color: #28a745; background: white;") %>
+</div>
+
+<%= form_for @alert_changeset, ~p"/alerts", fn f -> %>
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-2">
+        <div class="form-group required">
+          <%= label(f, :context, class: "control-label") %>
+          <%= text_input(f, :context, class: "form-control text-uppercase") %>
+          <%= error_tag(f, :context) %>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="form-group required">
+          <%= label(f, :name, class: "control-label") %>
+          <%= text_input(f, :name, class: "form-control") %>
+          <%= error_tag(f, :name) %>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="form-group">
+          <%= label f, :schedule, class: "control-label" do %>
+            Schedule (<a href="https://crontab.guru" target="_blank">cron format</a>)
+          <% end %>
+          <%= text_input(f, :schedule, class: "form-control", style: "font-family: monospace;", placeholder: "empty for manual execution") %>
+          <%= error_tag(f, :schedule) %>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="form-group">
+          <%= label(f, :threshold, class: "control-label") %>
+          <%= number_input(f, :threshold, class: "form-control", placeholder: "10") %>
+          <%= error_tag(f, :threshold) %>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-3">
+        <div class="form-group required">
+          <%= label(f, :data_source_id, "Data source", class: "control-label") %>
+          <%= select(f, :data_source_id, 
+              [{"Select data source", ""}] ++ Enum.map(@data_sources, &{&1.display_name, &1.id}), 
+              class: "form-control") %>
+          <%= error_tag(f, :data_source_id) %>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="row">
+      <div class="col-md-8">
+        <div class="form-group required">
+          <%= label(f, :query, "SQL", class: "control-label") %>
+          <%= textarea(f, :query, class: "form-control", rows: 8, style: "font-family: monospace; font-size: 14px;") %>
+          <%= AlertsWeb.AlertHTML.form_validation_error_tag(f, :query) %>
+        </div>
+        
+        <!-- Dedicated SQL Error Display Area -->
+        <%= case AlertsWeb.Helpers.get_sql_database_errors(@alert_changeset) do %>
+          <% [] -> %>
+          <% sql_errors -> %>
+            <div style="margin-top: 10px; padding: 15px; border: 1px solid #d9534f; border-radius: 4px; background-color: white;">
+              <%= for {technical_error, _} <- sql_errors do %>
+                <pre style="font-family: monospace; font-size: 12px; margin: 0; white-space: pre-wrap; background-color: #fff; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"><%= technical_error %></pre>
+              <% end %>
+            </div>
+        <% end %>
+      </div>
+      <div class="col-md-4">
+        <div class="form-group required">
+          <%= label(f, :description, class: "control-label") %>
+          <%= textarea(f, :description, class: "form-control", rows: 8) %>
+          <%= error_tag(f, :description) %>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<script>
+document.getElementById('submit-btn').addEventListener('click', function(e) {
+  e.preventDefault();
+  document.querySelector('form').submit();
+});
+</script>

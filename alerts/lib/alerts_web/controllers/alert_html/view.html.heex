@@ -1,0 +1,637 @@
+<h1>
+  <%= link("Alerts", to: ~p"/alerts") %>
+  &rarr;
+  <em><%= link(@alert.context, to: ~p"/alerts?context=#{@alert.context}") %></em>
+  &rarr;
+  <em><%= @alert.name %></em>
+</h1>
+
+<p>
+  Time right now:
+  <%= "Europe/Paris" |> Timex.now() |> Timex.format!("%Y-%m-%d %H:%M:%S", :strftime) %>
+  <small style="color: #666; margin-left: 10px;">(<%= Mix.env() %>)</small>
+</p>
+
+<div class="text-right hidden-print" style="margin-bottom: 20px;">
+  <form style="display: inline;" method="post" action={~p"/alerts/run/#{@alert.alert_public_id}?follow=run"}>
+    <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+    <button class="btn-icon btn-icon-primary action-bar-btn" type="submit" title="Run alert">
+      <%= render_play_icon() %>
+    </button>
+  </form>
+  
+  <%= if (@alert.results_size || 0) > 0 do %>
+    <form style="display: inline;" method="post" action={~p"/alerts/csv/#{@alert.alert_public_id}"}>
+      <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+      <button class="btn-icon btn-icon-success action-bar-btn" type="submit" title="Download Latest Results">
+        <%= render_download_icon() %>
+      </button>
+    </form>
+  <% else %>
+    <span class="btn-icon btn-icon-disabled action-bar-btn" title={if @alert.last_run, do: "No results to download", else: "Alert has never been run"}>
+      <%= render_download_icon() %>
+    </span>
+  <% end %>
+  
+  <button class="btn-icon btn-icon-secondary action-bar-btn" onclick="refreshPage()" title="Refresh page">
+    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle;">
+      <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+      <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+    </svg>
+  </button>
+  
+  <%= link(render_edit_icon(), to: ~p"/alerts/edit/#{@alert.alert_public_id}", class: "btn-icon btn-icon-secondary action-bar-btn", title: "Edit alert") %>
+  <%= link(render_delete_icon(), to: ~p"/alerts/#{@alert.alert_public_id}", method: :delete, 
+      data: [confirm: "Delete alert #{@alert.alert_public_id}. Are you sure?"], class: "btn-icon btn-icon-danger action-bar-btn", title: "Delete alert") %>
+</div>
+
+<!-- Tab Navigation -->
+<ul class="nav nav-tabs">
+  <li class="active" role="presentation">
+    <a href="#details" aria-controls="details" role="tab" data-toggle="tab">Details</a>
+  </li>
+  <li role="presentation">
+    <a href="#query-history" aria-controls="query-history" role="tab" data-toggle="tab">History</a>
+  </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content">
+  <!-- Details Tab -->
+  <div class="tab-pane active" id="details" role="tabpanel">
+    <div class="row">
+      <div class="col-md-8 table-responsive">
+        <table class="table">
+          <tbody>
+            <tr>
+              <th class="text-right" style="vertical-align:middle;">Id</th>
+              <td><%= @alert.id %></td>
+            </tr>
+            <tr>
+              <th class="text-right" style="vertical-align:middle;">Name</th>
+              <td><%= @alert.name %></td>
+            </tr>
+            <tr>
+              <th class="text-right" style="vertical-align:middle;">Context</th>
+              <td><%= @alert.context %></td>
+            </tr>
+            <tr>
+              <th class="text-right" style="vertical-align:middle;">Data source</th>
+              <td><%= render_source(@alert.data_source) %></td>
+            </tr>
+            <tr>
+              <th class="text-right" style="vertical-align:middle;">Schedule</th>
+              <td><%= render_schedule(@alert) %></td>
+            </tr>
+            <tr>
+              <th class="text-right" style="vertical-align:middle;">Threshold</th>
+              <td><%= @alert.threshold %></td>
+            </tr>
+            <tr>
+              <th class="text-right" style="vertical-align:middle;">Description</th>
+              <td class="text-left">
+                <div style="display: table;table-layout: fixed;width: 100%;">
+                  <pre><%= @alert.description %></pre>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <th class="text-right" style="vertical-align:middle;">SQL</th>
+              <td class="text-left">
+                <div style="display: table;table-layout: fixed;width: 100%;">
+                  <pre><%= @alert.query %></pre>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="col-md-4 table-responsive">
+        <table class="table">
+          <tbody>
+            <%= if (@alert.results_size || 0) > 0 do %>
+              <tr>
+                <th class="text-right" style="vertical-align:middle;">Results</th>
+                <td><%= "#{render_total(@alert.results_size)}" %></td>
+              </tr>
+            <% end %>
+
+            <tr>
+              <th class="text-right" style="vertical-align:middle;">Status</th>
+              <td>
+                <%= render_status(@alert) %>
+                <%= if @alert.status not in ["needs refreshing", "never run"] do %>
+                  <br>
+                  since <%= render_date_relative(@alert.last_status_change) %>
+                <% end %>
+              </td>
+            </tr>
+
+            <tr>
+              <th class="text-right" style="vertical-align:middle;">Last run</th>
+              <td><%= render_date(@alert.last_run) %></td>
+            </tr>
+
+            <tr>
+              <th class="text-right" style="vertical-align:middle;">Created</th>
+              <td><%= render_date(@alert.created_at) %></td>
+            </tr>
+
+            <tr>
+              <th class="text-right" style="vertical-align:middle;">Updated</th>
+              <td><%= render_date(@alert.last_edited) %></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div class="clearfix"></div>
+  </div>
+  
+  <!-- Timeline History Tab -->
+  <div class="tab-pane" id="query-history" role="tabpanel">
+    <div class="row">
+      <div class="col-md-12">
+        <%= if length(@unified_timeline) > 0 do %>
+          <div class="timeline-container">
+            <%= for event <- @unified_timeline do %>
+              <div class={"timeline-event #{event.type} #{if event.type == :result_change, do: "status-#{event.data.status}", else: ""}"}>
+                <div class="timeline-marker">
+                  <span class="timeline-icon"><%= event.icon %></span>
+                </div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <h4 class="timeline-title"><%= event.title %></h4>
+                    <span class="timeline-time">
+                      <%= event.timestamp |> AlertsWeb.Helpers.format_date_local() %>
+                    </span>
+                  </div>
+                  <div class="timeline-summary">
+                    <%= event.summary %>
+                  </div>
+                  <%= if event.type == :result_change and event.data.status != "broken" do %>
+                    <div class="timeline-details">
+                      <div class="timeline-results-info">
+                        <small class="text-muted">
+                          <%= if event.data.is_truncated do %>
+                            <%= event.data.row_count %> of <%= event.data.total_rows %> rows (truncated)
+                          <% else %>
+                            <%= event.data.row_count %> rows
+                          <% end %>
+                        </small>
+                        <%= if event.data.row_count > 0 do %>
+                          <form class="form-inline timeline-download-form" method="post" action={~p"/alerts/csv_snapshot/#{event.data.id}"} style="display: inline; margin-left: 10px;">
+                            <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+                            <button class="btn btn-xs btn-default" type="submit" title="Download this result">
+                              <%= render_download_icon() %> CSV
+                            </button>
+                          </form>
+                        <% else %>
+                          <button class="btn btn-xs btn-default disabled-download" disabled title="No results to download" style="display: inline; margin-left: 10px;">
+                            <%= render_download_icon() %> CSV
+                          </button>
+                        <% end %>
+                      </div>
+                    </div>
+                  <% end %>
+                  <!-- Show current tag for most recent entry -->
+                  <div class="timeline-details">
+                    <%= if Map.get(event, :is_current, false) do %>
+                      <span class="label label-success">Current</span>
+                    <% end %>
+                  </div>
+                  
+                  <!-- Unified Diff Section -->
+                  <%= if event.diff_content do %>
+                    <div class="timeline-diff-toggle">
+                      <button class="diff-toggle-btn" onclick={"toggleTimelineDiff('diff-#{event.data.id}')"}>
+                        <span class="diff-emoji">🔍</span>
+                        <span class="diff-text">Show changes</span>
+                        <span class="diff-arrow">⌄</span>
+                      </button>
+                    </div>
+                    
+                    <div id={"diff-#{event.data.id}"} class="timeline-diff-content" style="display: none;">
+                      <div class="diff-section">
+                        <%= event.diff_content %>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="alert alert-info">
+            <p>Timeline history will appear here showing both configuration changes and result changes. Run the alert to see result entries in the timeline.</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+  
+</div>
+
+<!-- Timeline Styles -->
+<style>
+.timeline-container {
+  position: relative;
+  padding: 20px 0;
+}
+
+.timeline-container::before {
+  content: '';
+  position: absolute;
+  left: 30px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #e1e5e9;
+  z-index: 1;
+}
+
+.timeline-event {
+  position: relative;
+  margin-bottom: 30px;
+  padding-left: 70px;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: 15px;
+  top: 5px;
+  width: 30px;
+  height: 30px;
+  background-color: #fff;
+  border: 3px solid #e1e5e9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.timeline-event.config_change .timeline-marker {
+  border-color: #007bff;
+  background-color: #f8f9fa;
+}
+
+.timeline-event.result_change .timeline-marker {
+  border-color: #28a745;
+  background-color: #f8f9fa;
+}
+
+.timeline-event.result_change.status-bad .timeline-marker {
+  border-color: #dc3545;
+}
+
+.timeline-event.result_change.status-broken .timeline-marker {
+  border-color: #6f42c1;
+}
+
+.timeline-event.result_change.status-broken .timeline-content {
+  background-color: white;
+  color: black;
+}
+
+.timeline-event.result_change.status-broken .timeline-header {
+  background: none;
+  color: black;
+  padding: 0;
+  margin: 0;
+}
+
+.timeline-event.result_change.status-broken .timeline-title {
+  background-color: black;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  margin: 0 0 8px 0;
+}
+
+.timeline-event.result_change.status-broken .timeline-time {
+  color: #ccc;
+}
+
+.timeline-event.result_change.status-good .timeline-content {
+  border-left: 4px solid #28a745; /* green */
+}
+
+.timeline-event.result_change.status-good .timeline-title {
+  color: #155724; /* darker green */
+}
+
+.timeline-event.result_change.status-bad .timeline-content {
+  border-left: 4px solid #dc3545; /* red */
+}
+
+.timeline-event.result_change.status-bad .timeline-title {
+  color: #721c24; /* darker red */
+}
+
+.timeline-event.result_change.status-under_threshold .timeline-content {
+  border-left: 4px solid #ffc107; /* yellow/orange */
+}
+
+.timeline-event.result_change.status-under_threshold .timeline-title {
+  color: #856404; /* darker yellow */
+}
+
+.timeline-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.timeline-content {
+  background-color: #fff;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.timeline-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.timeline-time {
+  font-size: 12px;
+  color: #6c757d;
+  white-space: nowrap;
+}
+
+.timeline-summary {
+  color: #495057;
+  margin-bottom: 8px;
+}
+
+.timeline-details {
+  margin-top: 8px;
+}
+
+.timeline-results-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.timeline-download-form {
+  margin: 0;
+}
+
+.timeline-download-form .btn {
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+/* Disabled button styling */
+.btn-icon-disabled {
+  color: #adb5bd;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.disabled-download {
+  color: #adb5bd !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+  text-decoration: none !important;
+}
+
+.disabled-download:hover {
+  color: #adb5bd !important;
+  text-decoration: none !important;
+}
+
+.timeline-event:last-child {
+  margin-bottom: 0;
+}
+
+/* Cute Diff Styles */
+.timeline-diff-toggle {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.diff-toggle-btn {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 6px 12px;
+  color: #495057;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.diff-toggle-btn:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.diff-emoji {
+  margin-right: 6px;
+  font-size: 14px;
+}
+
+.diff-arrow {
+  margin-left: 6px;
+  transition: transform 0.3s ease;
+}
+
+.diff-toggle-btn.expanded .diff-arrow {
+  transform: rotate(180deg);
+}
+
+.timeline-diff-content {
+  margin-top: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8f9ff 0%, #fff5f8 100%);
+  border: 1px solid #e8ecff;
+  border-radius: 12px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.diff-item {
+  margin-bottom: 16px;
+  last-child: margin-bottom: 0;
+}
+
+.diff-field {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.diff-field-emoji {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.diff-field-name {
+  font-size: 14px;
+}
+
+.diff-values {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.diff-old, .diff-new {
+  flex: 1;
+  min-width: 200px;
+}
+
+.diff-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.diff-old .diff-label {
+  color: #e53e3e;
+}
+
+.diff-new .diff-label {
+  color: #38a169;
+}
+
+.diff-content {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  line-height: 1.4;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+.diff-content.old {
+  background: #fed7d7;
+  border-left: 3px solid #e53e3e;
+  color: #742a2a;
+}
+
+.diff-content.new {
+  background: #c6f6d5;
+  border-left: 3px solid #38a169;
+  color: #22543d;
+}
+</style>
+
+<!-- Tab functionality JavaScript -->
+<script>
+  // Handle tab switching on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, hash:', window.location.hash);
+    
+    if (window.location.hash === '#query-history') {
+      console.log('Activating query-history tab');
+      activateHistoryTab('#query-history');
+    }
+  });
+  
+  // Handle hash changes (when clicking history link)
+  window.addEventListener('hashchange', function() {
+    console.log('Hash changed to:', window.location.hash);
+    
+    if (window.location.hash === '#query-history') {
+      console.log('Activating query-history tab from hashchange');
+      activateHistoryTab('#query-history');
+    }
+  });
+  
+  function activateHistoryTab(tabId) {
+    // Remove active classes
+    document.querySelectorAll('.nav-tabs li').forEach(function(li) {
+      li.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-pane').forEach(function(pane) {
+      pane.classList.remove('active');
+    });
+    
+    // Add active classes to specified tab
+    var historyLink = document.querySelector('a[href="' + tabId + '"]');
+    if (historyLink) {
+      historyLink.parentElement.classList.add('active');
+    }
+    
+    var historyPane = document.getElementById(tabId.substring(1)); // Remove #
+    if (historyPane) {
+      historyPane.classList.add('active');
+    }
+    
+    console.log('Tab switching complete to:', tabId);
+  }
+
+  $(function() {
+    // Enable Bootstrap tabs
+    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+      // Optional: Handle tab shown event
+    });
+  });
+  
+  // Cute timeline diff toggle function
+  function toggleTimelineDiff(targetId) {
+    var diffContent = document.getElementById(targetId);
+    var button = document.querySelector(`[onclick*="${targetId}"]`);
+    var textSpan = button.querySelector('.diff-text');
+    
+    if (diffContent.style.display === 'none' || diffContent.style.display === '') {
+      diffContent.style.display = 'block';
+      button.classList.add('expanded');
+      textSpan.textContent = 'Hide changes';
+    } else {
+      diffContent.style.display = 'none';
+      button.classList.remove('expanded');
+      textSpan.textContent = 'Show changes';
+    }
+  }
+
+  // Smart refresh that preserves current tab
+  function refreshPage() {
+    var currentTab = '';
+    
+    // Check if history tab is active
+    var historyTab = document.querySelector('a[href="#query-history"]').parentElement;
+    if (historyTab.classList.contains('active')) {
+      currentTab = '#query-history';
+    }
+    
+    // Refresh with current tab preserved
+    window.location.href = window.location.pathname + currentTab;
+  }
+</script>

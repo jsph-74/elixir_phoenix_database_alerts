@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Welcome to stored alerts</title>
+    <!-- Bootstrap CSS from CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      .container2 { max-width: 1600px; margin: 0 auto; padding: 20px; }
+      .header { margin-bottom: 30px; }
+      .nav-tabs { margin-bottom: 20px; }
+      .table { margin-top: 20px; }
+      .text-right { text-align: right; margin-bottom: 20px; }
+      .form-inline { display: inline-block; margin-left: 10px; }
+      .label { padding: 0.2em 0.6em 0.3em; font-size: 75%; font-weight: 700; line-height: 1; color: #fff; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: 0.25em; }
+      .label-danger { background-color: #d9534f; }
+      .label-info { background-color: #5bc0de; }
+      .label-success { background-color: #5cb85c; }
+      .label-warning { background-color: #f0ad4e; }
+      .sort { color: #337ab7; text-decoration: none; }
+      .sort:hover { text-decoration: underline; }
+      .btn-link { background: none; border: none; color: #337ab7; cursor: pointer; }
+      .text-nowrap { white-space: nowrap; }
+      .label-primary { background-color: #337ab7; }
+      .label-default { background-color: #777; }
+      .hidden-print { display: block; }
+      .tab-content { padding-top: 20px; }
+      .tab-pane { display: none; }
+      .tab-pane.active { display: block; }
+      .tab-content .table tr:first-child td,
+      .tab-content .table tr:first-child th { border-top: none; }
+      
+      /* GitLab-style diff styling */
+      .diff-container { background: #fafafa; border: 1px solid #ddd; border-radius: 4px; padding: 10px; }
+      .diff-header { font-size: 14px; color: #666; margin-bottom: 10px; }
+      .diff-lines { font-family: 'Courier New', monospace; font-size: 12px; }
+      .diff-line { display: flex; margin: 0; line-height: 1.4; }
+      .diff-marker { width: 20px; text-align: center; font-weight: bold; flex-shrink: 0; }
+      .diff-code { flex: 1; padding-left: 5px; white-space: pre-wrap; }
+      .diff-line.unchanged { background: #fff; }
+      .diff-line.removed { background: #ffeaea; }
+      .diff-line.removed .diff-marker { color: #d73a49; }
+      .diff-line.added { background: #d4edda; border-left: 3px solid #28a745; }
+      .diff-line.added .diff-marker { color: #28a745; background: #c3e6cb; }
+      .diff-line.added .diff-code { background: #d4edda; color: #155724; }
+      .diff-row td { padding: 0 !important; }
+      
+      /* Custom fast tooltips */
+      .tooltip-container { position: relative; cursor: help; }
+      .custom-tooltip { 
+        position: absolute; 
+        bottom: 100%; 
+        left: 50%; 
+        transform: translateX(-50%); 
+        background: rgba(0,0,0,0.9); 
+        color: white; 
+        padding: 8px 12px; 
+        border-radius: 4px; 
+        font-size: 13px; 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        z-index: 1000; 
+        opacity: 0; 
+        pointer-events: none; 
+        transition: opacity 0.2s; 
+        width: 500px; 
+        white-space: normal; 
+        word-wrap: break-word; 
+        line-height: 1.4;
+      }
+      .custom-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border: 5px solid transparent;
+        border-top-color: rgba(0,0,0,0.9);
+      }
+      .tooltip-container:hover .custom-tooltip { opacity: 1; }
+      
+      /* Field change highlighting */
+      .field-changed { 
+        color: #155724; 
+        font-weight: 600;
+      }
+      
+      /* Standardized icon buttons */
+      .btn-icon {
+        padding: 4px 8px !important;
+        margin-right: 2px;
+        background: white;
+        border-width: 1px;
+        border-style: solid;
+        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
+        min-height: 28px;
+        text-decoration: none !important;
+      }
+      
+      .btn-icon:hover {
+        text-decoration: none !important;
+        opacity: 0.8;
+      }
+      
+      .btn-icon svg {
+        width: 14px;
+        height: 14px;
+        vertical-align: middle;
+      }
+      
+      /* Button color variants */
+      .btn-icon-primary { border-color: #007bff; color: #007bff; }
+      .btn-icon-secondary { border-color: #6c757d; color: #6c757d; }
+      .btn-icon-success { border-color: #28a745; color: #28a745; }
+      .btn-icon-info { border-color: #17a2b8; color: #17a2b8; }
+      .btn-icon-danger { border-color: #dc3545; color: #dc3545; }
+      
+      .btn-icon-disabled {
+        border-color: #6c757d;
+        color: #6c757d;
+        background: #f8f9fa !important;
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+      
+      /* Action bar buttons - consistent alignment */
+      .action-bar-btn {
+        min-height: 32px;
+        padding: 6px 12px !important;
+        display: inline-flex;
+        align-items: center;
+        box-sizing: border-box;
+        vertical-align: baseline;
+        margin-right: 4px;
+        line-height: 1;
+      }
+      
+      .action-bar-btn.btn-icon {
+        min-width: 32px;
+        padding: 6px 8px !important;
+        justify-content: center;
+        position: relative;
+        top: 2px;
+      }
+      
+      @media print { .hidden-print { display: none !important; } }
+    </style>
+  </head>
+
+  <body>
+    <div class="container2">
+      <header class="header">
+        <nav role="navigation">
+          <div class="pull-right">
+            <%= link to: ~p"/data_sources", title: "Settings", style: "color: #6c757d; text-decoration: none; font-size: 18px;" do %>
+              <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle;">
+                <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.292-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.292c.415.764-.42 1.6-1.185 1.184l-.292-.159a1.873 1.873 0 0 0-2.692 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.693-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.292A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+              </svg>
+            <% end %>
+          </div>
+        </nav>
+        <span class="logo"></span>
+      </header>
+
+      <%= if Phoenix.Flash.get(@flash, :info) do %>
+        <p class="alert alert-info" role="alert"><%= Phoenix.Flash.get(@flash, :info) %></p>
+      <% end %>
+      <%= if Phoenix.Flash.get(@flash, :error) do %>
+        <p class="alert alert-danger" role="alert"><%= Phoenix.Flash.get(@flash, :error) %></p>
+      <% end %>
+
+      <main role="main">
+        <%= @inner_content %>
+      </main>
+
+    </div> <!-- /container -->
+    <script src="/assets/phoenix_html.js"></script>
+    <!-- jQuery and Bootstrap JS for tabs -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,26 @@
+FROM mcr.microsoft.com/playwright:v1.55.0-jammy
+
+WORKDIR /tests
+
+# Copy package files first for better Docker layer caching
+COPY e2e-tests/package*.json ./
+
+# Install exact Node.js dependencies with forced versions
+RUN npm install && npm cache clean --force
+
+# Copy all test files after npm install
+COPY e2e-tests/ ./
+
+# Install additional database clients for data manipulation
+RUN apt-get update && apt-get install -y \
+    mysql-client \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install browsers manually using the installed version
+RUN npx playwright@1.55.0 install chromium || \
+    ./node_modules/.bin/playwright install chromium || \
+    echo "Browser install failed, will try at runtime"
+
+# Default command
+CMD ["npm", "test"]

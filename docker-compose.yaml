@@ -1,0 +1,196 @@
+services:
+  # PostgreSQL database for the Phoenix alerts application, holding both dev and test environment dbs
+  db:
+    image: postgres
+    container_name: alerts_db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - PGPORT=5432
+    command: ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=256MB"]
+    volumes:
+      - type: volume
+        source: alerts-postgres-data
+        target: /var/lib/postgresql/data
+      - type: volume
+        source: alerts-postgres-home
+        target: /nonexistent
+
+  # Phoenix alerts application (development) -----
+  web-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.PhoenixAlerts
+    container_name: alerts_phoenix
+    volumes:
+      - type: bind
+        source: ./alerts
+        target: /app
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ./files
+        target: /files
+      - type: volume
+        source: alerts-elixir-home
+        target: /nonexistent
+      # Exclude deps, _build, and SSL from bind mount to preserve container-compiled dependencies and container-internal certificates
+      - /app/deps
+      - /app/_build
+      - /app/priv/ssl
+    ports:
+      - "4000:4000"
+      - "4001:4001"  # HTTPS port
+    depends_on:
+      - db
+    environment:
+      # IMPORTANT: Generate a secure key: openssl rand -base64 32
+      # Replace this default key with your own secure key!
+      - DATA_SOURCE_ENCRYPTION_KEY=${DATA_SOURCE_ENCRYPTION_KEY:-CHANGEME_GENERATE_SECURE_KEY_WITH_OPENSSL_RAND_BASE64_32}
+      # SSL Configuration
+      - ENABLE_SSL=${ENABLE_SSL:-false}
+      - HTTPS_PORT=${HTTPS_PORT:-4001}
+      - HTTP_PORT=${HTTP_PORT:-4000}
+      - PHX_HOST=${PHX_HOST:-localhost}
+      - SESSION_TIMEOUT_MINUTES=${SESSION_TIMEOUT_MINUTES:-10}
+    command:
+      - ./bin/boot.sh
+
+  # Phoenix alerts application (production) -----
+  web-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile.PhoenixAlerts
+    container_name: alerts_phoenix_prod
+    volumes:
+      - type: bind
+        source: ./alerts
+        target: /app
+      - type: bind
+        source: ./files
+        target: /files
+      - type: volume
+        source: alerts-elixir-home
+        target: /nonexistent
+      # Exclude SSL from bind mount for container-internal certificates
+      - /app/priv/ssl
+    ports:
+      - "4004:4004"
+      - "4005:4005"  # HTTPS port for prod
+    depends_on:
+      - db
+    environment:
+      - DATA_SOURCE_ENCRYPTION_KEY=${DATA_SOURCE_ENCRYPTION_KEY:-CHANGEME_GENERATE_SECURE_KEY_WITH_OPENSSL_RAND_BASE64_32}
+      - MIX_ENV=prod
+      - PORT=4004
+      - DATABASE_HOST=db
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_NAME=alerts_prod
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE:-CHANGEME_GENERATE_SECRET_KEY_BASE_WITH_MIX_PHX_GEN_SECRET}
+      # SSL Configuration
+      - ENABLE_SSL=${ENABLE_SSL:-false}
+      - HTTPS_PORT=${HTTPS_PORT:-4005}
+      - HTTP_PORT=${HTTP_PORT:-4004}
+      - PHX_HOST=${PHX_HOST:-localhost}
+      - SESSION_TIMEOUT_MINUTES=${SESSION_TIMEOUT_MINUTES:-10}
+    profiles:
+      - production
+    command:
+      - ./bin/boot.sh
+  
+  # Containers for testing
+
+  # Test web instance -----
+  web-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.PhoenixAlerts
+    container_name: alerts_phoenix_test
+    volumes:
+      - type: bind
+        source: ./alerts
+        target: /app
+      - type: bind
+        source: ./files
+        target: /files
+      - type: volume
+        source: alerts-elixir-home
+        target: /nonexistent
+      # Exclude SSL from bind mount for container-internal certificates
+      - /app/priv/ssl
+    ports:
+      - "4002:4002"
+      - "4003:4003"  # HTTPS port for test
+    depends_on:
+      - db
+    environment:
+      - DATA_SOURCE_ENCRYPTION_KEY=${DATA_SOURCE_ENCRYPTION_KEY:-CHANGEME_GENERATE_SECURE_KEY_WITH_OPENSSL_RAND_BASE64_32}
+      - MIX_ENV=test
+      - PORT=4002
+      # SSL Configuration
+      - ENABLE_SSL=${ENABLE_SSL:-false}
+      - HTTPS_PORT=${HTTPS_PORT:-4003}
+      - HTTP_PORT=${HTTP_PORT:-4002}
+      - PHX_HOST=${PHX_HOST:-localhost}
+      - SESSION_TIMEOUT_MINUTES=${SESSION_TIMEOUT_MINUTES:-10}
+    profiles:
+      - testing
+    command:
+      - ./bin/boot.sh
+
+  # Frontend E2E testing -----
+  playwright:
+    build:
+      context: .
+      dockerfile: Dockerfile.Playwright
+    container_name: alerts_e2e_tests
+    volumes:
+      - type: bind
+        source: ./e2e-tests
+        target: /tests
+      - /tests/node_modules
+    environment:
+      - BASE_URL=http://web-test:4002
+    depends_on:
+      - web-test
+      - test_mysql
+      - test_postgres
+    profiles:
+      - testing
+    command: ["npm", "test"]
+
+
+  # Sample monitored database, useful for testing as data source for the alerts -----
+  test_mysql:
+    image: mysql:latest
+    container_name: test_mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=mysql
+      - MYSQL_DATABASE=test
+    volumes:
+      - type: bind
+        source: ./test_dumps/mysql
+        target: /docker-entrypoint-initdb.d
+
+  # Sample monitored database, useful for testing as data source for the alerts -----
+  test_postgres:
+    image: postgres:latest
+    container_name: test_postgres
+    ports:
+      - "5433:5433"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - PGPORT=5433
+    volumes:
+      - type: bind
+        source: ./test_dumps/postgres
+        target: /docker-entrypoint-initdb.d
+
+volumes:
+  alerts-postgres-data:
+  alerts-postgres-home:
+  alerts-elixir-home:

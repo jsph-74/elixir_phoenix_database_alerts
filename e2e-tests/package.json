@@ -1,0 +1,18 @@
+{
+  "name": "alerts-e2e-tests",
+  "version": "1.0.0",
+  "description": "End-to-end tests for Alerts application",
+  "scripts": {
+    "test": "./node_modules/.bin/playwright test",
+    "test:headed": "./node_modules/.bin/playwright test --headed",
+    "test:ui": "./node_modules/.bin/playwright test --ui",
+    "test:debug": "./node_modules/.bin/playwright test --debug",
+    "codegen": "./node_modules/.bin/playwright codegen"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.0",
+    "playwright": "1.55.0",
+    "mysql2": "^3.6.0",
+    "pg": "^8.11.0"
+  }
+}
