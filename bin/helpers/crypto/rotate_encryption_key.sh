@@ -30,9 +30,10 @@ echo "Current key loaded from: $KEY_FILE"
 # Confirm rotation
 echo -e "${YELLOW}⚠ This will:"
 echo "  1. Generate a new encryption key"
-echo "  2. Re-encrypt all existing passwords with the new key" 
-echo "  3. Update the database with new encrypted values"
-echo "  4. Backup the old key for recovery${NC}"
+echo "  2. Re-encrypt all existing data source passwords with the new key"
+echo "  3. Re-encrypt master password (if configured) with the new key" 
+echo "  4. Update the database with new encrypted values"
+echo "  5. Backup the old key for recovery${NC}"
 echo
 confirm_or_exit "Are you sure you want to rotate the encryption key? (y/N): " "Key rotation cancelled."
 
@@ -53,18 +54,33 @@ echo -e "${GREEN}✓ Stored new key at: $KEY_FILE${NC}"
 export DATA_SOURCE_ENCRYPTION_KEY="$NEW_KEY"
 export OLD_DATA_SOURCE_ENCRYPTION_KEY="$OLD_KEY"
 
-echo -e "${BLUE}🔄 Running password re-encryption...${NC}"
+echo -e "${BLUE}🔄 Running password and master password re-encryption...${NC}"
+
+# Boot database containers first
+./bin/helpers/db/boot_db_containers.sh alerts_db $MIX_ENV
 
 # Get the correct service name for the environment
 SERVICE_NAME=$(get_service_name "$MIX_ENV")
 
 # Run the Elixir key rotation script
-docker-compose run --rm -T \
-    --entrypoint="" \
-    -e MIX_ENV="$MIX_ENV" \
-    -e DATA_SOURCE_ENCRYPTION_KEY="$NEW_KEY" \
-    -e OLD_DATA_SOURCE_ENCRYPTION_KEY="$OLD_KEY" \
-    $SERVICE_NAME mix run scripts/rotate_encryption_key.exs "$OLD_KEY" "$NEW_KEY"
+if [ "$MIX_ENV" = "prod" ]; then
+    SECRET_KEY_BASE=$(cat "$HOME/.alerts-prod/secret_key_base.txt")
+    export SECRET_KEY_BASE
+    docker-compose run --rm -T \
+        --entrypoint="" \
+        -e MIX_ENV="$MIX_ENV" \
+        -e DATA_SOURCE_ENCRYPTION_KEY="$NEW_KEY" \
+        -e OLD_DATA_SOURCE_ENCRYPTION_KEY="$OLD_KEY" \
+        -e SECRET_KEY_BASE="$SECRET_KEY_BASE" \
+        $SERVICE_NAME mix run --no-start scripts/rotate_encryption_key.exs "$OLD_KEY" "$NEW_KEY"
+else
+    docker-compose run --rm -T \
+        --entrypoint="" \
+        -e MIX_ENV="$MIX_ENV" \
+        -e DATA_SOURCE_ENCRYPTION_KEY="$NEW_KEY" \
+        -e OLD_DATA_SOURCE_ENCRYPTION_KEY="$OLD_KEY" \
+        $SERVICE_NAME mix run --no-start scripts/rotate_encryption_key.exs "$OLD_KEY" "$NEW_KEY"
+fi
 
 echo
 echo "✅ Key rotation completed successfully, Old key backed up at: $OLD_KEY_FILE!"

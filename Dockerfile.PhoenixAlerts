@@ -31,15 +31,13 @@ RUN mkdir -p /nonexistent/.mix /nonexistent/.hex /nonexistent/.cache \
 COPY ./alerts /app
 
 # Create SSL directories for all environments and fix ownership
-RUN mkdir -p /app/priv/ssl/dev /app/priv/ssl/test /app/priv/ssl/prod && \
-    chown -R 65534:65534 /app
+RUN mkdir -p /app/priv/ssl/dev /app/priv/ssl/test /app/priv/ssl/prod
 
-# Switch to non-root user and install Elixir tools
+# Create SSL directories for all environments and fix ownership
+RUN chown -R 65534:65534 /app
+
+# Switch to non-root user for runtime
 USER 65534
-RUN mix local.hex --force && mix local.rebar --force
-
-# Install dependencies and compile them
-RUN mix deps.get && mix deps.compile
 
 # Ports are configured dynamically per environment in docker-compose.yaml
 

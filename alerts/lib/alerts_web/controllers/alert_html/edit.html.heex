@@ -12,7 +12,7 @@
   <%= link("Update Alert", to: "#", class: "btn action-bar-btn", id: "submit-btn", style: "border: 1px solid #28a745; color: #28a745; background: white;") %>
 </div>
 
-<%= form_for @alert_changeset, ~p"/alerts/#{@alert.alert_public_id}", [method: :put], fn f -> %>
+<%= form_for @alert_changeset, ~p"/alerts/#{@alert.alert_public_id}", [method: :put, id: "alert-edit-form"], fn f -> %>
   <div class="container-fluid">
     <div class="row">
       <div class="col-md-2">
@@ -93,6 +93,6 @@
 <script>
 document.getElementById('submit-btn').addEventListener('click', function(e) {
   e.preventDefault();
-  document.querySelector('form').submit();
+  document.getElementById('alert-edit-form').submit();
 });
 </script>

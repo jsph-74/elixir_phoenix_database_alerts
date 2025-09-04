@@ -127,7 +127,7 @@ docker cp /etc/letsencrypt/live/yourdomain.com/privkey.pem alerts_phoenix_prod:/
 
 ### Security Management
 ```bash
-# Rotate encryption keys (re-encrypts all data source passwords)
+# Rotate encryption keys (re-encrypts all data source passwords and master password)
 ./bin/helpers/crypto/rotate_encryption_key.sh prod
 
 # Initialize encryption key
@@ -138,26 +138,44 @@ docker cp /etc/letsencrypt/live/yourdomain.com/privkey.pem alerts_phoenix_prod:/
 
 Add application-level password protection requiring login to access the web interface.
 
+**Setup Master Password:**
 ```bash
-# Set up master password for any environment
+# Interactive setup (secure password input)
 ./bin/helpers/crypto/setup_master_password.sh dev
 ./bin/helpers/crypto/setup_master_password.sh prod
 
-# Or provide password directly (non-interactive)
+# Non-interactive setup
 ./bin/helpers/crypto/setup_master_password.sh dev "your_secure_password"
 ```
+
+**Requirements:**
+- Environment must be running (application started)
+- Password must be at least 8 characters
+- Confirmation required for interactive setup
 
 **Configuration:**
 ```bash
 # Set session timeout (default: 10 minutes)
 SESSION_TIMEOUT_MINUTES=30 ./bin/dev/startup.sh
+
+# Start with master password enabled
+./bin/dev/startup.sh  # Automatically detects master password
 ```
 
+**User Experience:**
+- 🔐 Login screen appears when master password is configured
+- 🚪 Logout button in top-right corner when authenticated
+- ⏱️ Automatic session timeout with configurable duration
+- 🔄 Seamless redirect to login when session expires
+
 **Security Features:**
-- SHA-256 hashed passwords encrypted with AES-256-GCM
-- Session-based authentication with configurable timeout
+- SHA-256 password hashing before encryption
+- AES-256-GCM encryption using existing encryption keys
+- Session-based authentication with CSRF protection
+- Configurable session timeout (environment variable)
 - Login screen protection for all routes
 - No environment variable bypasses
+- Secure logout clears all session data
 
 ---
 

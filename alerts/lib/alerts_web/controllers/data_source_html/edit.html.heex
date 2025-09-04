@@ -36,7 +36,7 @@
 <div class="row">
   <div class="col-md-10">
     
-    <%= form_for @changeset, ~p"/data_sources/#{@data_source}", [method: :put], fn f -> %>
+    <%= form_for @changeset, ~p"/data_sources/#{@data_source}", [method: :put, id: "data-source-edit-form"], fn f -> %>
       <div class="row">
         <div class="col-md-6">
           <div class="form-group">
@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 document.getElementById('submit-btn').addEventListener('click', function(e) {
   e.preventDefault();
-  document.querySelector('form').submit();
+  document.getElementById('data-source-edit-form').submit();
 });
 
 document.getElementById('test-connection-btn').addEventListener('click', function(e) {

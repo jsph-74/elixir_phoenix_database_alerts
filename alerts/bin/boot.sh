@@ -2,7 +2,7 @@
 set -e
 
 # Install/update dependencies first
-mix local.hex --force
+mix local.hex --force --unsafe-https
 mix deps.get
 
 # Wait for Postgres to become available
@@ -13,7 +13,7 @@ until psql -p 5432 -h alerts_db -U "postgres" -c '\q' 2>/dev/null; do
 done
 
 # Setup database
-mix ecto.create -r Alerts.Repo
+mix ecto.create -r Alerts.Repo --quiet
 mix ecto.migrate -r Alerts.Repo
 
 
