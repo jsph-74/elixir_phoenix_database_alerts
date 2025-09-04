@@ -1,7 +1,6 @@
 defmodule AlertsWeb.Router do
   use AlertsWeb, :router
   import Plug.Conn
-  alias Alerts.Business.MasterPassword
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -24,7 +23,7 @@ defmodule AlertsWeb.Router do
   end
 
   pipeline :require_master_password do
-    plug :check_master_password_authentication
+    plug AlertsWeb.Plugs.RequireAuth
   end
 
   # Authentication routes (no auth required)
@@ -33,6 +32,7 @@ defmodule AlertsWeb.Router do
     
     get("/login", AuthController, :login)
     post("/login", AuthController, :authenticate)
+    post("/logout", AuthController, :logout)
   end
 
   scope "/", AlertsWeb do
@@ -80,27 +80,6 @@ defmodule AlertsWeb.Router do
   #   pipe_through :api
   # end
 
-  # Authentication plug
-  defp check_master_password_authentication(conn, _opts) do
-    cond do
-      # Skip if master password is not configured
-      not MasterPassword.master_password_configured?() ->
-        conn
-        
-      # Skip if already authenticated in session
-      get_session(conn, :authenticated) == true ->
-        conn
-        
-      # Redirect to login
-      true ->
-        conn
-        |> put_flash(:error, "Master password required")
-        |> redirect(to: "/auth/login")
-        |> halt()
-    end
-  rescue
-    _error ->
-      # If there's any error (e.g., DB not available), allow access
-      conn
-  end
+  # Legacy authentication function - now replaced by AlertsWeb.Plugs.RequireAuth
+  # Kept for reference in case of rollback needs
 end

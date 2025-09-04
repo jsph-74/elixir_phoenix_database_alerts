@@ -23,7 +23,7 @@
 <div class="row">
   <div class="col-md-10">
     
-    <%= form_for @changeset, ~p"/data_sources", fn f -> %>
+    <%= form_for @changeset, ~p"/data_sources", [id: "data-source-form"], fn f -> %>
       <div class="row">
         <div class="col-md-6">
           <div class="form-group">
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 document.getElementById('submit-btn').addEventListener('click', function(e) {
   e.preventDefault();
-  document.querySelector('form').submit();
+  document.getElementById('data-source-form').submit();
 });
 
 document.getElementById('test-connection-btn').addEventListener('click', function(e) {

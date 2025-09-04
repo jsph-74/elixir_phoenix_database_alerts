@@ -8,7 +8,7 @@
   <%= link("Create Alert", to: "#", class: "btn action-bar-btn", id: "submit-btn", style: "border: 1px solid #28a745; color: #28a745; background: white;") %>
 </div>
 
-<%= form_for @alert_changeset, ~p"/alerts", fn f -> %>
+<%= form_for @alert_changeset, ~p"/alerts", [id: "alert-form"], fn f -> %>
   <div class="container-fluid">
     <div class="row">
       <div class="col-md-2">
@@ -89,6 +89,6 @@
 <script>
 document.getElementById('submit-btn').addEventListener('click', function(e) {
   e.preventDefault();
-  document.querySelector('form').submit();
+  document.getElementById('alert-form').submit();
 });
 </script>
