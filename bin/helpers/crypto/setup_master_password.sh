@@ -84,28 +84,10 @@ fi
 # Setup master password using Mix task
 print_status "🔐 Setting up master password..." $YELLOW
 
-# Set up environment variables for production
-if [ "$ENVIRONMENT" = "prod" ]; then
-    # Load production secrets
-    if [ -f ~/.alerts-prod/secret_key_base.txt ]; then
-        SECRET_KEY_BASE=$(cat ~/.alerts-prod/secret_key_base.txt)
-        export SECRET_KEY_BASE
-    else
-        print_status "❌ Production secrets not initialized. Run: ./bin/prod/init_prod_secrets.sh" $RED
-        exit 1
-    fi
-    
-    # Load encryption key
-    if [ -f ~/.alerts-prod/encryption_key.txt ]; then
-        DATA_SOURCE_ENCRYPTION_KEY=$(cat ~/.alerts-prod/encryption_key.txt)
-        export DATA_SOURCE_ENCRYPTION_KEY
-    else
-        print_status "❌ Production encryption key not found. Run: ./bin/helpers/crypto/init_encryption_key.sh prod" $RED
-        exit 1
-    fi
-fi
+# Ensure Docker secrets are initialized for this environment
+check_swarm_secrets "$ENVIRONMENT"
 
-MIX_ENV=$ENVIRONMENT docker-compose run --rm --entrypoint="" web-$ENVIRONMENT mix run --no-compile -e "
+exec_in_stack_service "$ENVIRONMENT" mix run --no-compile -e "
 # Start required applications
 Application.ensure_all_started(:alerts)
 

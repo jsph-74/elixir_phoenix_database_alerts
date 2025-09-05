@@ -4,8 +4,8 @@ import Config
 config :alerts, Alerts.Repo,
   username: "postgres",
   password: "postgres",
-  hostname: "alerts_db",
-  database: "alerts_dev",
+  hostname: System.get_env("DATABASE_HOST", "db-dev"),
+  database: "alerts",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
@@ -77,9 +77,3 @@ config :phoenix_live_view,
   debug_attributes: true,
   # Enable helpful, but potentially expensive runtime checks
   enable_expensive_runtime_checks: true
-
-# Alerts configuration
-config :alerts, :export_folder, "/files"
-config :alerts, ecto_repos: [Alerts.Repo]
-config :alerts, git_browser: "http://localhost:8080/"
-# Legacy config-based data sources removed - now using database-backed data sources only

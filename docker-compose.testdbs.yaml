@@ -1,0 +1,31 @@
+# External read only test databases for dev and test environments to connect to
+# These run outside the Docker Swarm and are shared between environments
+
+services:
+  test-mysql:
+    image: mysql:latest
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=mysql
+      - MYSQL_DATABASE=test
+    command: ["mysqld", "--bind-address=0.0.0.0"]
+    volumes:
+      - type: bind
+        source: ./test_dumps/mysql
+        target: /docker-entrypoint-initdb.d
+    restart: unless-stopped
+
+  test-postgres:
+    image: postgres:latest  
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=test
+    command: ["postgres", "-c", "listen_addresses=*", "-c", "max_connections=200"]
+    volumes:
+      - type: bind
+        source: ./test_dumps/postgres
+        target: /docker-entrypoint-initdb.d
+    restart: unless-stopped

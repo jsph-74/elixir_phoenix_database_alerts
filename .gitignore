@@ -20,8 +20,8 @@ files/*
 *.log
 *.tmp
 
-# Generated Docker Compose (from template)
-docker-compose.yaml
+# Docker Compose files contain generated secret names
+docker-compose-*.yaml
 
 # E2E Test artifacts
 e2e-tests/test-results/

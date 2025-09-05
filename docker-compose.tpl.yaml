@@ -1,168 +1,71 @@
-# Templates
-x-db-template: &db-template
-  image: postgres
-  environment:
-    - POSTGRES_PASSWORD=postgres
-    - POSTGRES_DB=alerts
-  command: ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=256MB"]
-
-x-web-template: &web-template
-  build:
-    context: .
-    dockerfile: Dockerfile.PhoenixAlerts
-  volumes:
-    - type: bind
-      source: ./alerts
-      target: /app
-      bind:
-        create_host_path: true
-    - type: bind
-      source: ./files
-      target: /files
-    - type: volume
-      source: alerts-elixir-home
-      target: /nonexistent
-    - /app/deps
-    - /app/_build
-    - /app/priv/ssl
-  environment: &web-env-template
-    DATABASE_USER: postgres
-    DATABASE_PASSWORD: postgres
-    DATABASE_NAME: alerts
-    ENABLE_SSL: ${ENABLE_SSL:-false}
-    PHX_HOST: ${PHX_HOST:-localhost}
-    SESSION_TIMEOUT_MINUTES: ${SESSION_TIMEOUT_MINUTES:-10}
-  command:
-    - ./bin/boot.sh
+version: '3.8'
 
 services:
-  # Development database
-  db-dev:
-    <<: *db-template
+  db-{{ENV}}:
+    image: postgres
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=alerts
+    command: ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=256MB"]
     ports:
-      - "5432:5432"
+      - "{{DB_PORT}}:5432"
     volumes:
-      - alerts-postgres-data-dev:/var/lib/postgresql/data
+      - alerts-postgres-data-{{ENV}}:/var/lib/postgresql/data
 
-  # Test database  
-  db-test:
-    <<: *db-template
+  web-{{ENV}}:
+    image: elixir_alerts-web-{{ENV}}
     ports:
-      - "5433:5432"
-
-  # Production database
-  db-prod:
-    <<: *db-template
-    ports:
-      - "5434:5432"
+      - "{{HTTP_PORT}}:{{HTTP_PORT}}"
+      - "{{HTTPS_PORT}}:{{HTTPS_PORT}}"
+    environment:
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: alerts
+      ENABLE_SSL: "false"
+      PHX_HOST: localhost
+      SESSION_TIMEOUT_MINUTES: "10"
+      MIX_ENV: {{ENV}}
+      PORT: "{{HTTP_PORT}}"
+      DATABASE_HOST: db-{{ENV}}
+      HTTPS_PORT: "{{HTTPS_PORT}}"
+      HTTP_PORT: "{{HTTP_PORT}}"
+    secrets:
+      - source: {{ENCRYPTION_SECRET_NAME}}
+        target: data_source_encryption_key
+      - source: {{SECRET_SECRET_NAME}}
+        target: secret_key_base
     volumes:
-      - alerts-postgres-data-prod:/var/lib/postgresql/data
+      - type: bind
+        source: ./alerts
+        target: /app
+      - type: bind
+        source: ./files
+        target: /files
+      - type: volume
+        source: alerts-elixir-home
+        target: /nonexistent
+      - /app/deps
+      - /app/_build
+      - /app/priv/ssl
+    command: ["./bin/boot.sh"]
 
-  # Phoenix alerts application - development environment
-  web-dev:
-    <<: *web-template
-    ports:
-      - "4000:4000"
-      - "4001:4001"
-    depends_on:
-      - db-dev
-    environment:
-      <<: *web-env-template
-      MIX_ENV: dev
-      PORT: 4000
-      DATABASE_HOST: db-dev
-      HTTPS_PORT: ${HTTPS_PORT:-4001}
-      HTTP_PORT: ${HTTP_PORT:-4000}
-
-  # Phoenix alerts application (production) -----
-  web-prod:
-    <<: *web-template
-    ports:
-      - "4004:4004"
-      - "4005:4005"
-    depends_on:
-      - db-prod
-    environment:
-      <<: *web-env-template
-      MIX_ENV: prod
-      PORT: 4004
-      DATABASE_HOST: db-prod
-      HTTPS_PORT: ${HTTPS_PORT:-4005}
-      HTTP_PORT: ${HTTP_PORT:-4004}
-  
-  # Containers for testing
-
-  # Phoenix alerts application - test environment
-  web-test:
-    <<: *web-template
-    ports:
-      - "4002:4002"
-      - "4003:4003"
-    depends_on:
-      - db-test
-    environment:
-      <<: *web-env-template
-      MIX_ENV: test
-      PORT: 4002
-      DATABASE_HOST: db-test
-      HTTPS_PORT: ${HTTPS_PORT:-4003}
-      HTTP_PORT: ${HTTP_PORT:-4002}
-
-  # Frontend E2E testing -----
   playwright:
-    build:
-      context: .
-      dockerfile: Dockerfile.Playwright
+    image: elixir_alerts-playwright
+    environment:
+      - DATA_SOURCE_ENCRYPTION_KEY={{ENCRYPTION_KEY_VALUE}}
     volumes:
       - type: bind
         source: ./e2e-tests
-        target: /tests
-      - /tests/node_modules
-    environment:
-      - BASE_URL=http://web-test:4002
-    depends_on:
-      - web-test
-      - test_mysql
-      - test_postgres
-    profiles:
-      - testing
-    command: ["npm", "test"]
-
-
-  # Sample monitored database, useful for testing as data source for the alerts -----
-  test_mysql:
-    image: mysql:latest
-    ports:
-      - "3306:3306"
-    environment:
-      - MYSQL_ROOT_PASSWORD=mysql
-      - MYSQL_DATABASE=test
-    volumes:
-      - type: bind
-        source: ./test_dumps/mysql
-        target: /docker-entrypoint-initdb.d
-
-  # Sample monitored database, useful for testing as data source for the alerts -----
-  test_postgres:
-    image: postgres:latest
-    ports:
-      - "5433:5433"
-    environment:
-      - POSTGRES_PASSWORD=postgres
-      - PGPORT=5433
-    volumes:
-      - type: bind
-        source: ./test_dumps/postgres
-        target: /docker-entrypoint-initdb.d
+        target: /app/e2e-tests
 
 volumes:
-  alerts-postgres-data-dev:
-  alerts-postgres-data-prod:
+  alerts-postgres-data-{{ENV}}:
   alerts-elixir-home:
+
+# No custom networks - use default bridge networking
 
 secrets:
   {{ENCRYPTION_SECRET_NAME}}:
     external: true
   {{SECRET_SECRET_NAME}}:
     external: true
-

@@ -1,5 +1,6 @@
 import Config
 
+
 # Configure your database
 #
 # The MIX_TEST_PARTITION environment variable can be used
@@ -8,11 +9,12 @@ import Config
 config :alerts, Alerts.Repo,
   username: "postgres",
   password: "postgres",
-  hostname: System.get_env("DATABASE_HOST", "db"),
+  hostname: System.get_env("DATABASE_HOST", "db-test"),
   port: String.to_integer(System.get_env("DATABASE_PORT", "5432")),
   database: "alerts_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
+
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.

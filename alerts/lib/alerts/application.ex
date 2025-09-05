@@ -18,10 +18,18 @@ defmodule Alerts.Application do
     :ok = validate_master_password_on_startup()
     
     # Only start scheduler and version supervisor in non-test environments
-    children = case Mix.env() do
-      :test -> 
+    # Skip endpoint if DISABLE_SERVER is set (for seeding)
+    children = case {Mix.env(), System.get_env("DISABLE_SERVER")} do
+      {:test, "true"} -> 
+        base_children
+      {:test, _} -> 
         base_children ++ [AlertsWeb.Endpoint]
-      _ -> 
+      {_, "true"} ->
+        base_children ++ [
+          Alerts.Scheduler,
+          Alerts.VersionSupervisor
+        ]
+      {_, _} -> 
         base_children ++ [
           Alerts.Scheduler,
           Alerts.VersionSupervisor,
