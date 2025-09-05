@@ -237,9 +237,9 @@ defmodule Alerts.Integration.AlertResultHistoryTest do
       result_titles = Enum.map(event_details, fn {_, title, _, _} -> title end)
       event_ids = Enum.map(event_details, fn {_, _, _, id} -> id end)
 
-      assert "Results: Under threshold" in result_titles
+      assert "Alert status: under threshold" in result_titles
       assert "Alert updated" in result_titles
-      assert "Results: Alert triggered" in result_titles
+      assert "Alert status: bad" in result_titles
       assert "Alert created" in result_titles
       assert snapshot2.id in event_ids
       assert updated_alert.id in event_ids
@@ -247,7 +247,7 @@ defmodule Alerts.Integration.AlertResultHistoryTest do
 
       # Most recent event should be the second result
       [{_, first_title, _, first_id} | _] = event_details
-      assert first_title == "Results: Under threshold"
+      assert first_title == "Alert status: under threshold"
       assert first_id == snapshot2.id
     end
 

@@ -35,12 +35,23 @@ defmodule Alerts.Integration.DataSourceAlertIntegrationTest do
 
     test "only counts current alerts" do
       data_source = Factory.insert!(:data_source, name: "test_db")
-      _alert = Factory.insert!(:alert, data_source_id: data_source.id)
-      Factory.insert!(:alert, data_source_id: data_source.id, lifecycle_status: "old")
-      Factory.insert!(:alert, data_source_id: data_source.id, lifecycle_status: "deleted")
+      
+      # Get initial count of alerts using this data source
+      initial_count = DataSources.count_alerts_using_data_source_id(data_source.id)
+      
+      # Create a current alert
+      _current_alert = Factory.insert!(:alert, data_source_id: data_source.id)
+      
+      # Create alert that will be updated (creates old version)
+      alert_to_update = Factory.insert!(:alert, data_source_id: data_source.id)
+      {:ok, _updated} = Alerts.Business.Alerts.update(alert_to_update, %{"name" => "Updated Name"})
+      
+      # Create alert that will be deleted (creates deleted version)
+      alert_to_delete = Factory.insert!(:alert, data_source_id: data_source.id)
+      _deleted = Alerts.Business.Alerts.delete(alert_to_delete.id)
 
-      # Should only count current alert
-      assert DataSources.count_alerts_using_data_source_id(data_source.id) == 1
+      # Should only count current alerts (initial + 1 current + 1 updated current = initial + 2)
+      assert DataSources.count_alerts_using_data_source_id(data_source.id) == initial_count + 2
     end
 
     test "returns usage statistics for all data sources" do
@@ -58,12 +69,25 @@ defmodule Alerts.Integration.DataSourceAlertIntegrationTest do
 
     test "only counts current alerts in statistics" do
       data_source = Factory.insert!(:data_source, name: "test_db")
-      Factory.insert!(:alert, data_source_id: data_source.id, lifecycle_status: "current")
-      Factory.insert!(:alert, data_source_id: data_source.id, lifecycle_status: "old")
-      Factory.insert!(:alert, data_source_id: data_source.id, lifecycle_status: "deleted")
+      
+      # Get initial stats for this data source
+      initial_stats = DataSources.get_data_source_usage_stats()
+      initial_count = Map.get(initial_stats, "test_db", 0)
+      
+      # Create a current alert
+      Factory.insert!(:alert, data_source_id: data_source.id)
+      
+      # Create alert that will be updated (creates old version)
+      alert_to_update = Factory.insert!(:alert, data_source_id: data_source.id)
+      {:ok, _updated} = Alerts.Business.Alerts.update(alert_to_update, %{"name" => "Updated Name"})
+      
+      # Create alert that will be deleted (creates deleted version)  
+      alert_to_delete = Factory.insert!(:alert, data_source_id: data_source.id)
+      _deleted = Alerts.Business.Alerts.delete(alert_to_delete.id)
 
+      # Should only count current alerts (initial + 1 current + 1 updated current = initial + 2)
       stats = DataSources.get_data_source_usage_stats()
-      assert stats["test_db"] == 1
+      assert stats["test_db"] == initial_count + 2
     end
   end
 end

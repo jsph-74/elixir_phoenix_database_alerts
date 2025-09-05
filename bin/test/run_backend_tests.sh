@@ -1,13 +1,19 @@
 #!/bin/bash
 set -e
 
+# Backend test runner
+# Usage: ./bin/test/run_backend_tests.sh [test]
+# Note: Only test environment supported due to SQL Sandbox requirements
+
 # Parse parameters
 MIX_ENV="${1:-test}"
 export MIX_ENV
 
-# Only allow dev and test environments
-if [ "$MIX_ENV" != "dev" ] && [ "$MIX_ENV" != "test" ]; then
-    echo "❌ Backend tests can only run in 'dev' or 'test' environments, not '$MIX_ENV'"
+# Only allow test environment (tests require SQL Sandbox for proper isolation)
+if [ "$MIX_ENV" != "test" ]; then
+    echo "❌ Backend tests require 'test' environment, not '$MIX_ENV'"
+    echo "💡 Tests use SQL Sandbox for proper test isolation"
+    echo "💡 Usage: $0 [test]"
     exit 1
 fi
 
