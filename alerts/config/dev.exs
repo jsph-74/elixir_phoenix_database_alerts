@@ -10,6 +10,12 @@ config :alerts, Alerts.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
+# Use SQL Sandbox when running tests in dev environment
+if System.get_env("MIX_TEST") do
+  config :alerts, Alerts.Repo,
+    pool: Ecto.Adapters.SQL.Sandbox
+end
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #

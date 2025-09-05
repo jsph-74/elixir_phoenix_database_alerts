@@ -2,18 +2,18 @@
 set -e
 
 # Backend test runner
-# Usage: ./bin/test/run_backend_tests.sh [test]
-# Note: Only test environment supported due to SQL Sandbox requirements
+# Usage: ./bin/test/run_backend_tests.sh [dev|test]
+# Run tests in dev to verify code doesn't break production-like environment
+# Run tests in test for isolated testing with clean database
 
 # Parse parameters
 MIX_ENV="${1:-test}"
 export MIX_ENV
 
-# Only allow test environment (tests require SQL Sandbox for proper isolation)
-if [ "$MIX_ENV" != "test" ]; then
-    echo "❌ Backend tests require 'test' environment, not '$MIX_ENV'"
-    echo "💡 Tests use SQL Sandbox for proper test isolation"
-    echo "💡 Usage: $0 [test]"
+# Only allow dev and test environments
+if [ "$MIX_ENV" != "dev" ] && [ "$MIX_ENV" != "test" ]; then
+    echo "❌ Backend tests can only run in 'dev' or 'test' environments, not '$MIX_ENV'"
+    echo "💡 Usage: $0 [dev|test]"
     exit 1
 fi
 
@@ -37,12 +37,10 @@ fi
 # External test databases should be running already
 echo "✅ Using external test databases (mysql:3306, postgres:5433)"
 
-# Reset the test database to ensure clean state
-echo "🔄 Resetting test database..."
-./bin/helpers/db/reset.sh test
+# Tests use SQL Sandbox for isolation - no need to reset database
 
 # Run the tests
 echo "🏃 Running Elixir/Phoenix tests..."
-docker exec $WEB_CONTAINER bash -c 'export DATA_SOURCE_ENCRYPTION_KEY=$(cat /run/secrets/data_source_encryption_key) && mix test'
+docker exec $WEB_CONTAINER bash -c 'export DATA_SOURCE_ENCRYPTION_KEY=$(cat /run/secrets/data_source_encryption_key) && export MIX_TEST=1 && mix test'
 
 echo "✅ Backend tests completed!"
