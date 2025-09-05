@@ -32,7 +32,7 @@ Local development with hot reload and debugging capabilities.
 
 **Prerequisites:** Start external test databases (shared between dev/test environments)
 ```bash
-./bin/helpers/db/start_external_testdbs.sh
+./bin/helpers/db/start_sample_dbs.sh
 ```
 
 **Then start dev environment:**
@@ -70,7 +70,7 @@ Automated testing with clean database state and E2E browser tests.
 
 **Prerequisites:** Start external test databases (if not already running from dev setup)
 ```bash
-./bin/helpers/db/start_external_testdbs.sh
+./bin/helpers/db/start_sample_dbs.sh
 ```
 
 **Then start test environment:**
@@ -97,13 +97,13 @@ Automated testing with clean database state and E2E browser tests.
 **Then run tests:**
 ```bash
 # Backend tests (Elixir/Phoenix) - resets DB and runs tests
-./bin/test/run_backend_tests.sh
+./bin/test/backend.sh
 
 # E2E tests (Playwright) - resets DB with sample data and runs tests
-./bin/test/run_e2e_tests.sh
+./bin/test/e2e.sh
 
 # E2E with specific pattern and workers
-./bin/test/run_e2e_tests.sh -w 3 "T4"
+./bin/test/e2e.sh -w 3 "T4"
 ```
 
 ---

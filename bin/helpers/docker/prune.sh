@@ -4,7 +4,7 @@ set -e
 # Source shared functions
 source "$(dirname "$0")/../functions.sh"
 
-print_status "🗑️  DESTROYING ALL DOCKER RESOURCES" $RED
+print_status "🗑️  DESTROYING ALL DOCKER RESOURCES IN YOUR LOCAL MACHINE!!!!!" $RED
 echo
 echo "This will remove:"
 echo "  • All containers (running and stopped)"

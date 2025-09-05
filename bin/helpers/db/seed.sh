@@ -25,7 +25,7 @@ if [ -z "$WEB_CONTAINER" ]; then
 fi
 
 # Start external test databases (needed for seeding)
-./bin/helpers/db/start_external_testdbs.sh
+./bin/helpers/db/start_sample_dbs.sh
 
 print_status "🌱 Seeding ${MIX_ENV} database..." $YELLOW
 docker exec $WEB_CONTAINER bash -c 'export DATA_SOURCE_ENCRYPTION_KEY=$(cat /run/secrets/data_source_encryption_key) && export DISABLE_SERVER=true && mix run -e "Application.ensure_all_started(:alerts); Code.eval_file(\"priv/repo/seeds.exs\")"'

@@ -24,3 +24,4 @@ print_status "Step 3: Building Docker image..." $YELLOW
 ./bin/build.sh "$ENV"
 
 print_status "✅ Environment $ENV initialized successfully!" $GREEN
+echo 

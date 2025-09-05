@@ -52,7 +52,7 @@ fi
 
 # Step 2: Start external test databases (not for prod)
 if [ "$ENV" != "prod" ]; then
-    ./bin/helpers/db/start_external_testdbs.sh
+    ./bin/helpers/db/start_sample_dbs.sh
 fi
 
 # Step 3: Initialize environment
@@ -84,7 +84,7 @@ done
 # Step 5: Seed database
 if [ "$ENV" != "prod" ]; then
     print_status "Seeding database with sample data..." $YELLOW
-    ./bin/helpers/db/reset.sh "$ENV" --seed
+    ./bin/helpers/db/seed.sh "$ENV" --seed
 fi
 
 echo
