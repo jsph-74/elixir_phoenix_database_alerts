@@ -20,6 +20,9 @@ files/*
 *.log
 *.tmp
 
+# Generated Docker Compose (from template)
+docker-compose.yaml
+
 # E2E Test artifacts
 e2e-tests/test-results/
 e2e-tests/playwright-report/
