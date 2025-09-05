@@ -2,7 +2,7 @@
 set -e
 
 # Backend test runner
-# Usage: ./bin/test/run_backend_tests.sh [dev|test]
+# Usage: ./bin/test/backend.sh [dev|test]
 # Run tests in dev to verify code doesn't break production-like environment
 # Run tests in test for isolated testing with clean database
 
@@ -37,7 +37,6 @@ fi
 # External test databases should be running already
 echo "✅ Using external test databases (mysql:3306, postgres:5433)"
 
-# Tests use SQL Sandbox for isolation - no need to reset database
 
 # Run the tests
 echo "🏃 Running Elixir/Phoenix tests..."
