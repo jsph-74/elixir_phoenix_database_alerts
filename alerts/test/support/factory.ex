@@ -12,32 +12,28 @@ defmodule Alerts.Factory do
       name: "test_source_#{unique_id}",
       display_name: "Test Data Source #{unique_id}",
       driver: "MariaDB Unicode",
-      server: "test_mysql",
+      server: "host.docker.internal",
       database: "test",
-      username: "monitor_user",
-      password: "monitor_pass",
+      username: "root",
+      password: "mysql",
       port: 3306,
       additional_params: %{}
     }
   end
 
   def build(:alert) do
-    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-
+    unique_id = :rand.uniform(999999)
+    alias Alerts.Business.DB.Alert
     %Alert{
-      name: "Test Alert",
-      context: "test_context",
-      description: "Test description",
+      name: "Test Alert #{unique_id}",
+      description: "Test description #{unique_id}",
       query: "SELECT 1",
-      data_source_id: nil,  # Will be set when we insert the data source
+      context: "test_#{unique_id}",
       threshold: 0,
       schedule: nil,
       status: "never run",
-      results_size: 0,
       alert_public_id: Ecto.UUID.generate(),
-      lifecycle_status: "current",
-      inserted_at: now,
-      updated_at: now
+      lifecycle_status: "current"
     }
   end
 
@@ -56,11 +52,34 @@ defmodule Alerts.Factory do
         insert!(:data_source)
       end
 
-    # Build the alert and set the data source relationship
-    alert = build(:alert, attributes)
-    alert = if data_source, do: %{alert | data_source_id: data_source.id}, else: alert
-
-    Repo.insert!(alert)
+    # Generate random test data
+    unique_id = :rand.uniform(999999)
+    
+    # Start with sensible defaults - use string keys like web forms
+    defaults = %{
+      "name" => "Test Alert #{unique_id}",
+      "description" => "Test description #{unique_id}", 
+      "query" => "SELECT 1",
+      "context" => "test_#{unique_id}"
+    }
+    
+    # Add data source if we created one
+    defaults = if data_source, do: Map.put(defaults, "data_source_id", data_source.id), else: defaults
+    
+    # Convert attributes from keyword list to map with string keys
+    attr_map = attributes 
+    |> Enum.into(%{})
+    |> Enum.into(%{}, fn {key, value} -> {to_string(key), value} end)
+    
+    # Merge with what the test wants to override
+    attrs = Map.merge(defaults, attr_map)
+    
+    # Use real app logic
+    case Alerts.Business.Alerts.create(attrs) do
+      {:ok, alert} -> alert
+      {:error, changeset} -> 
+        raise "Factory failed to create alert: #{inspect(changeset.errors)}"
+    end
   end
 
   def insert!(factory_name, attributes) do

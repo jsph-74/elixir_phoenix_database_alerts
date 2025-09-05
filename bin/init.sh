@@ -13,7 +13,7 @@ echo
 
 # Step 1: Create Docker Swarm secrets
 print_status "Step 1: Creating Docker Swarm secrets..." $YELLOW
-source ./bin/helpers/crypto/create_secrets.sh "$ENV"
+source ./bin/helpers/crypto/secrets.sh "$ENV"
 
 # Step 2: Generate Docker Compose file  
 print_status "Step 2: Generating Docker Compose file..." $YELLOW

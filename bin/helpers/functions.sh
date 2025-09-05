@@ -87,7 +87,7 @@ check_swarm_secrets() {
     # Check if Docker Swarm is initialized
     if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -q active; then
         print_status "❌ Docker Swarm is not initialized" $RED
-        echo "Please run: ./bin/helpers/crypto/init_secrets.sh $env"
+        echo "Please run: ./bin/helpers/crypto/secrets.sh $env"
         exit 1
     fi
 
@@ -97,7 +97,7 @@ check_swarm_secrets() {
     
     if [ "$encryption_secrets" -eq 0 ] || [ "$secret_key_secrets" -eq 0 ]; then
         print_status "❌ No Docker secrets found" $RED
-        echo "Please run: ./bin/helpers/crypto/init_secrets.sh $env"
+        echo "Please run: ./bin/helpers/crypto/secrets.sh $env"
         exit 1
     fi
 }
@@ -114,7 +114,7 @@ get_secret_names() {
     
     if [ -z "$ENCRYPTION_SECRET" ] || [ -z "$SECRET_KEY_SECRET" ]; then
         print_status "❌ No secrets found for $env environment" $RED
-        echo "Please run: ./bin/helpers/crypto/init_secrets.sh $env"
+        echo "Please run: ./bin/helpers/crypto/secrets.sh $env"
         exit 1
     fi
     

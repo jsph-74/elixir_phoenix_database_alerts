@@ -21,7 +21,7 @@ config :alerts, Alerts.Repo,
 config :alerts, AlertsWeb.Endpoint,
   http: [ip: {0, 0, 0, 0}, port: String.to_integer(System.get_env("PORT") || "4002")],
   secret_key_base: "h44yMQRJyQW1VilrwNaIuGB9SgtlhQg0yCHBGiDmfr8OxcKy+/3bObAn4KIC/ebm",
-  server: true
+  server: System.get_env("START_SERVER") == "true"
 
 # Print only warnings and errors during test
 config :logger, level: :warning

@@ -23,7 +23,7 @@ esac
 
 # Check if required secret variables are set
 if [ -z "$ENCRYPTION_SECRET_NAME" ] || [ -z "$SECRET_SECRET_NAME" ]; then
-    print_status "❌ Secret names not set. Run create_secrets.sh first" $RED
+    print_status "❌ Secret names not set. Run secrets.sh first" $RED
     exit 1
 fi
 

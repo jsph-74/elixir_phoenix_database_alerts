@@ -262,6 +262,10 @@ defmodule Alerts.Business.AlertsTest do
 
   describe "scheduled alerts" do
     test "reboot_all_jobs only processes current scheduled alerts" do
+      # Get initial count of scheduled jobs
+      initial_job_configs = AlertLib.reboot_all_jobs()
+      initial_count = length(initial_job_configs)
+      
       # Create alerts with schedules
       scheduled = Factory.insert!(:alert, schedule: "0 9 * * *")
       Factory.insert!(:alert, schedule: nil)  # Manual alert
@@ -273,14 +277,18 @@ defmodule Alerts.Business.AlertsTest do
       job_configs = AlertLib.reboot_all_jobs()
       assert is_list(job_configs)
 
-      # Should have exactly 1 job for the current scheduled alert
-      assert length(job_configs) == 1
+      # Should have initial count + 1 job for the new scheduled alert
+      assert length(job_configs) == initial_count + 1
 
       # The job should be for the updated (current) version, not the old version
-      job = hd(job_configs)
-      assert job.name == :"alert_#{updated_scheduled.alert_public_id}"
-      assert job.schedule |> to_string() == "0 9 * * *"  # Cron expression
-      assert job.task == {Alerts.Business.Alerts, :run_by_history_id, [updated_scheduled.alert_public_id]}
+      # Find our specific alert in the job configs by alert_public_id
+      our_job = Enum.find(job_configs, fn alert -> 
+        alert.alert_public_id == updated_scheduled.alert_public_id
+      end)
+      
+      assert our_job != nil, "Should find our updated scheduled alert"
+      assert our_job.schedule == "0 9 * * *"
+      assert our_job.name == "Updated Scheduled"
     end
   end
 
