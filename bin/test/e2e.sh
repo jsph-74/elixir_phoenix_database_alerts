@@ -38,20 +38,16 @@ export MIX_ENV
 # Only allow dev and test environments
 if [ "$MIX_ENV" != "dev" ] && [ "$MIX_ENV" != "test" ]; then
     print_status "❌ E2E tests can only run in 'dev' or 'test' environments, not '$MIX_ENV'" $RED
-    echo "💡 Usage: $0 [dev|test] [grep_pattern]"
     exit 1
 fi
 
 print_status "🧪 Running E2E tests in $MIX_ENV environment (workers: $WORKERS)..." $BLUE
-if [ -n "$GREP_PATTERN" ]; then
-    print_status "🔍 Filtering tests with pattern: '$GREP_PATTERN'" $YELLOW
-fi
+
 
 # Check if the stack is running
 STACK_NAME="alerts-${MIX_ENV}"
 if ! docker stack ls | grep -q "$STACK_NAME"; then
     print_status "❌ Stack $STACK_NAME is not running. Please start it first with:" $RED
-    echo "  ./bin/startup.sh ${MIX_ENV}"
     exit 1
 fi
 
@@ -78,17 +74,42 @@ if [ $retries -eq 30 ]; then
     exit 1
 fi
 
-# Change to E2E test directory
-cd e2e-tests
+print_status "🎭 Running Playwright E2E tests in container..." $BLUE
 
-# @TODO:NOOOOOO THIS HAS TO BE RUN IN THE CONTAINERRRRRRRR, HOST == NO WARRANTY IS INSTALLED!!!!!!!!!!
-print_status "🎭 Running Playwright E2E tests..." $BLUE
-export PLAYWRIGHT_WORKERS=$WORKERS
+# Get the playwright service container for the environment
+PLAYWRIGHT_SERVICE="alerts-${MIX_ENV}_playwright"
 
+# Start playwright service 
+print_status "🚀 Starting Playwright service..." $YELLOW
+docker service update --detach --replicas=1 "$PLAYWRIGHT_SERVICE"
+
+# Wait for container to be ready
+print_status "⏳ Waiting for Playwright container to start..." $YELLOW
+retries=0
+while [ $retries -lt 30 ]; do
+    PLAYWRIGHT_CONTAINER=$(docker ps -q --filter "name=${PLAYWRIGHT_SERVICE}")
+    if [ -n "$PLAYWRIGHT_CONTAINER" ]; then
+        break
+    fi
+    retries=$((retries + 1))
+    echo -n "."
+    sleep 2
+done
+
+if [ -z "$PLAYWRIGHT_CONTAINER" ]; then
+    echo ""
+    print_status "❌ Playwright container failed to start after 60 seconds" $RED
+    exit 1
+fi
+
+echo ""
+print_status "✅ Playwright container ready" $GREEN
+
+# Run tests inside the Playwright container
 if [ -n "$GREP_PATTERN" ]; then
-    ./node_modules/.bin/playwright test --grep "$GREP_PATTERN" --workers=$WORKERS --reporter=line
+    docker exec "$PLAYWRIGHT_CONTAINER" ./node_modules/.bin/playwright test --grep "$GREP_PATTERN" --workers=$WORKERS --reporter=line
 else
-    ./node_modules/.bin/playwright test --workers=$WORKERS --reporter=line
+    docker exec "$PLAYWRIGHT_CONTAINER" ./node_modules/.bin/playwright test --workers=$WORKERS --reporter=line
 fi
 
 echo ""

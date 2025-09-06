@@ -158,11 +158,11 @@ exec_in_stack_service() {
     shift
     
     # Get the container ID for the stack service
-    local container_id=$(docker ps --filter "name=alerts_${service_name}" --format "{{.ID}}" | head -1)
+    local container_id=$(docker ps --filter "name=alerts-${env}_${service_name}" --format "{{.ID}}" | head -1)
     
     if [ -z "$container_id" ]; then
-        print_status "❌ Service alerts_${service_name} not running" $RED
-        echo "Please start the environment first: ./bin/${env}/startup.sh"
+        print_status "❌ Service alerts-${env}_${service_name} not running" $RED
+        echo "Please start the environment first: ./bin/startup.sh ${env}"
         exit 1
     fi
     

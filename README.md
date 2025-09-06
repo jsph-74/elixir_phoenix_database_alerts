@@ -30,7 +30,7 @@ Local development with hot reload and debugging capabilities.
 
 ### Setup & Run
 
-**Prerequisites:** Start external test databases (shared between dev/test environments)
+**Prerequisites:** Start external test databases (shared between dev/test environment, needed for seeding)
 ```bash
 ./bin/helpers/db/start_sample_dbs.sh
 ```
@@ -38,20 +38,19 @@ Local development with hot reload and debugging capabilities.
 **Then start dev environment:**
 ```bash
 # Full sequence (initialize, build, start, seed with test data)
-./bin/helpers/crypto/init_secrets.sh dev && ./bin/build.sh dev && ./bin/startup.sh dev && sleep 20 && ./bin/helpers/db/reset.sh dev --seed
+./bin/init.sh dev && ./bin/startup.sh dev && sleep 20 && ./bin/helpers/db/seed.sh dev
 
 # Or step by step:
-./bin/helpers/crypto/init_secrets.sh dev  # Create Docker Swarm secrets
-./bin/build.sh dev                        # Build Docker image
-./bin/startup.sh dev                      # Start environment
-./bin/helpers/db/reset.sh dev --seed      # Reset DB and add sample data
+./bin/init.sh dev                    # Initialize: create secrets, generate compose, build image
+./bin/startup.sh dev                 # Start environment
+./bin/helpers/db/seed.sh dev         # Seed database with sample data
 ```
 **→ Access at http://localhost:4000**
 
 ### With SSL (Optional)
 ```bash
-# Generate self-signed certificate (stored in container)
-./bin/helpers/crypto/generate_self_signed_cert.sh dev
+# Generate and install self-signed certificate (stored in container)
+./bin/helpers/crypto/install_self_signed_certificate.sh dev
 
 # Restart to enable SSL (startup script auto-detects certificates)
 ./bin/startup.sh dev
@@ -59,6 +58,18 @@ Local development with hot reload and debugging capabilities.
 **→ Access at https://localhost:4001 (HTTPS) or http://localhost:4000 (HTTP) - both work independently**
 
 *Note: Self-signed certificates will show browser security warnings - click through to proceed.*
+
+### Stop Environment
+```bash
+# Stop dev environment
+docker stack rm alerts-dev
+
+# Stop test environment
+docker stack rm alerts-test
+
+# Stop all sample databases
+docker-compose -f docker-compose.sample-dbs.yaml down
+```
 
 ---
 
@@ -76,13 +87,12 @@ Automated testing with clean database state and E2E browser tests.
 **Then start test environment:**
 ```bash
 # Full sequence (initialize, build, start, seed with test data)
-./bin/helpers/crypto/init_secrets.sh test && ./bin/build.sh test && ./bin/startup.sh test && sleep 20 && ./bin/helpers/db/reset.sh test --seed
+./bin/init.sh test && ./bin/startup.sh test && sleep 20 && ./bin/helpers/db/seed.sh test
 
 # Or step by step:
-./bin/helpers/crypto/init_secrets.sh test  # Create Docker Swarm secrets
-./bin/build.sh test                        # Build Docker image  
-./bin/startup.sh test                      # Start environment
-./bin/helpers/db/reset.sh test --seed      # Reset DB and add sample data
+./bin/init.sh test                   # Initialize: create secrets, generate compose, build image
+./bin/startup.sh test                # Start environment
+./bin/helpers/db/seed.sh test        # Seed database with sample data
 ```
 **→ Access at http://localhost:4002**
 
@@ -91,7 +101,7 @@ Automated testing with clean database state and E2E browser tests.
 **Prerequisites:** Test environment must be running first
 ```bash
 # Start test environment (if not already running)
-./bin/helpers/crypto/init_secrets.sh test && ./bin/build.sh test && ./bin/startup.sh test
+./bin/init.sh test && ./bin/startup.sh test
 ```
 
 **Then run tests:**
@@ -99,11 +109,11 @@ Automated testing with clean database state and E2E browser tests.
 # Backend tests (Elixir/Phoenix) - resets DB and runs tests
 ./bin/test/backend.sh
 
-# E2E tests (Playwright) - resets DB with sample data and runs tests
-./bin/test/e2e.sh
+# E2E tests (Playwright) - seed DB with sample data and run tests
+./bin/helpers/db/seed.sh test && ./bin/test/e2e.sh
 
 # E2E with specific pattern and workers
-./bin/test/e2e.sh -w 3 "T4"
+./bin/helpers/db/seed.sh test && ./bin/test/e2e.sh -w 3 "T4"
 ```
 
 ---
@@ -115,12 +125,11 @@ Production-ready deployment with security hardening and SSL/HTTPS.
 ### Setup & Run
 ```bash
 # Full sequence (initialize, build, start - no seeding in prod)
-./bin/helpers/crypto/init_secrets.sh prod && ./bin/build.sh prod && ./bin/startup.sh prod
+./bin/init.sh prod && ./bin/startup.sh prod
 
 # Or step by step:
-./bin/helpers/crypto/init_secrets.sh prod  # Create Docker Swarm secrets
-./bin/build.sh prod                        # Build Docker image
-./bin/startup.sh prod                      # Start environment
+./bin/init.sh prod        # Initialize: create secrets, generate compose, build image
+./bin/startup.sh prod     # Start environment
 # Note: No seeding in prod - add data through web interface
 ```
 **→ Access at http://localhost:4004**
@@ -129,11 +138,11 @@ Production-ready deployment with security hardening and SSL/HTTPS.
 
 **Option 1: Self-signed certificate (testing)**
 ```bash
-# Generate certificate (stored in container)
-./bin/helpers/crypto/generate_self_signed_cert.sh prod
+# Generate and install self-signed certificate (stored in container)
+./bin/helpers/crypto/install_self_signed_certificate.sh prod
 
 # Optional: Generate with custom domain
-SSL_DOMAIN="yourdomain.com" ./bin/helpers/crypto/generate_self_signed_cert.sh prod
+SSL_DOMAIN="yourdomain.com" ./bin/helpers/crypto/install_self_signed_certificate.sh prod
 ```
 
 **Option 2: CA-signed certificate (production)**
@@ -141,10 +150,10 @@ SSL_DOMAIN="yourdomain.com" ./bin/helpers/crypto/generate_self_signed_cert.sh pr
 # Get Let's Encrypt certificate (on host)
 sudo certbot certonly --standalone -d yourdomain.com
 
-# Copy certificates to running container (get container ID first)
-CONTAINER_ID=$(docker ps -q -f name=alerts-prod_web-prod)
-docker cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem $CONTAINER_ID:/app/priv/ssl/prod/cert.pem
-docker cp /etc/letsencrypt/live/yourdomain.com/privkey.pem $CONTAINER_ID:/app/priv/ssl/prod/key.pem
+# Install custom certificate using helper script
+./bin/helpers/crypto/install_custom_certificate.sh prod \
+  /etc/letsencrypt/live/yourdomain.com/fullchain.pem \
+  /etc/letsencrypt/live/yourdomain.com/privkey.pem
 ```
 
 **Enable SSL and restart:**
@@ -157,8 +166,14 @@ docker cp /etc/letsencrypt/live/yourdomain.com/privkey.pem $CONTAINER_ID:/app/pr
 ### Security Management
 ```bash
 # Secrets are managed through Docker Swarm
-# To rotate secrets, run init_secrets.sh again to generate new ones
-./bin/helpers/crypto/init_secrets.sh prod
+# To rotate secrets, run init again to generate new ones
+./bin/init.sh prod
+```
+
+### Stop Environment
+```bash
+# Stop production environment
+docker stack rm alerts-prod
 ```
 
 ### Master Password Protection (Optional)

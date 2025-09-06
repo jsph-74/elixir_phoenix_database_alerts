@@ -17,7 +17,6 @@ encryption_key =
         {:error, _} ->
           raise """
           DATA_SOURCE_ENCRYPTION_KEY environment variable or Docker secret is missing.
-          Start the environment first: ./bin/#{config_env()}/startup.sh
           """
       end
     key when is_binary(key) ->
@@ -104,7 +103,6 @@ if config_env() == :prod do
           {:error, _} ->
             raise """
             SECRET_KEY_BASE environment variable or Docker secret is missing.
-            Start the environment first: ./bin/prod/startup.sh
             """
         end
       key when is_binary(key) ->

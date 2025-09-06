@@ -30,15 +30,15 @@ export class AlertTestHelper {
 
     await this.page.goto('/alerts/new');
     
-    await this.page.fill('#alert_context', alertData.context);
-    await this.page.fill('#alert_name', alertData.name);
-    await this.page.fill('#alert_description', alertData.description);
+    await this.page.fill('#alert-form_context', alertData.context);
+    await this.page.fill('#alert-form_name', alertData.name);
+    await this.page.fill('#alert-form_description', alertData.description);
     
     // Use seeded data source (always available)
-    await this.page.selectOption('#alert_data_source_id', { label: alertData.dataSourceLabel });
+    await this.page.selectOption('#alert-form_data_source_id', { label: alertData.dataSourceLabel });
     
-    await this.page.fill('#alert_query', alertData.query);
-    await this.page.fill('#alert_threshold', alertData.threshold);
+    await this.page.fill('#alert-form_query', alertData.query);
+    await this.page.fill('#alert-form_threshold', alertData.threshold);
     
     await this.page.click('#submit-btn');
     
@@ -122,6 +122,23 @@ export class AlertTestHelper {
     await expect(runButton).toBeVisible();
     await runButton.click();
   }
+
+  /**
+   * Delete alert from alert detail page
+   */
+  async deleteAlertFromAlertDetail() {
+     const deleteButton = this.page.locator('a.btn-icon-danger[title="Delete alert"]');
+    await expect(deleteButton).toBeVisible();
+    
+    // Set up dialog handler before clicking
+    this.page.on('dialog', async dialog => {
+      await dialog.accept();
+    });
+    
+    await deleteButton.click();
+    
+  }
+  
 }
 
 export class HistoryTestHelper {

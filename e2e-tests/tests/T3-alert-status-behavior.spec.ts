@@ -19,10 +19,12 @@ test.describe('Alert Status Behavior Tests', () => {
 
   test('T31 - new alert shows never run status', async ({ page }) => {
     // Create a fresh alert that will be in "never run" state
+    const randomId = Math.random().toString(36).substring(7);
     const alert = await alertHelper.createTestAlert({
       name: 'Never Run Status Test',
       query: 'SELECT 1 as test_value',
-      threshold: '2'
+      threshold: '2',
+      context: 'T31'
     });
 
     const stayedOnForm = await alert.stayedOnForm();
@@ -34,6 +36,9 @@ test.describe('Alert Status Behavior Tests', () => {
     const statusCell = alert.page.locator('tr:has-text("Status") td').last();
     await expect(statusCell).toContainText('never run');
     await expect(statusCell).not.toContainText('since');
+
+    await alertHelper.findAlertRowInContextListing(alert.context, alert.name);
+    alertHelper.deleteAlertFromAlertDetail()
   });
 
   test('T32 - running alert with broken connection shows broken status', async ({ page }) => {
@@ -72,7 +77,7 @@ test.describe('Alert Status Behavior Tests', () => {
     await expect(page.locator('h1')).toContainText('Edit');
     
     // Update query
-    await page.fill('#alert_query', 'SELECT 7 UNION SELECT 8 UNION SELECT 9');
+    await page.fill('#alert-edit-form_query', 'SELECT 7 UNION SELECT 8 UNION SELECT 9');
     await page.click('#submit-btn');
 
     // Should redirect to alert detail
@@ -85,10 +90,12 @@ test.describe('Alert Status Behavior Tests', () => {
 
   test('T35 - alert with results under threshold shows under threshold status', async ({ page }) => {
     // Create alert that returns few results (under threshold)
+    const randomId = Math.random().toString(36).substring(7);
     const alert = await alertHelper.createTestAlert({
       name: 'Under Threshold Test',
       query: 'SELECT 1 UNION SELECT 2', // 2 rows
-      threshold: '5' // Threshold is 5, so 2 rows is under
+      threshold: '5', // Threshold is 5, so 2 rows is under,
+      context: 'T35'
     });
 
     await expect(alert.page.locator('h1')).toContainText('Under Threshold Test');
@@ -97,14 +104,20 @@ test.describe('Alert Status Behavior Tests', () => {
     await page.waitForTimeout(2000);
     const statusCell = alert.page.locator('tr:has-text("Status") td').last();
     await expect(statusCell).toContainText('under threshold');
+    
+    await alertHelper.findAlertRowInContextListing(alert.context, alert.name);
+    alertHelper.deleteAlertFromAlertDetail()
   });
 
   test('T36 - alert with zero results shows good status', async ({ page }) => {
     // Create alert that returns no results (good status)
+    const randomId = Math.random().toString(36).substring(7);
     const alert = await alertHelper.createTestAlert({
       name: 'Good Status Test',
       query: 'SELECT 1 WHERE 1=0', // 0 rows
-      threshold: '5' // Any threshold, 0 results = good
+      threshold: '5', // Any threshold, 0 results = good       
+      context: 'T36'
+
     });
 
     await expect(alert.page.locator('h1')).toContainText('Good Status Test');
@@ -113,14 +126,19 @@ test.describe('Alert Status Behavior Tests', () => {
     await page.waitForTimeout(2000);
     const statusCell = alert.page.locator('tr:has-text("Status") td').last();
     await expect(statusCell).toContainText('good');
+
+    await alertHelper.findAlertRowInContextListing(alert.context, alert.name);
+    alertHelper.deleteAlertFromAlertDetail()
   });
 
   test('T36b - alert with results equal to threshold shows bad status', async ({ page }) => {
     // Create alert that returns results equal to threshold
+    const randomId = Math.random().toString(36).substring(7);
     const alert = await alertHelper.createTestAlert({
       name: 'Bad Status Test Equal',
       query: 'SELECT 1 UNION SELECT 2 UNION SELECT 3', // 3 rows
-      threshold: '3' // Threshold is 3, so 3 >= 3 = bad
+      threshold: '3', // Threshold is 3, so 3 >= 3 = bad
+      context: 'T36b'
     });
 
     await expect(alert.page.locator('h1')).toContainText('Bad Status Test Equal');
@@ -129,14 +147,19 @@ test.describe('Alert Status Behavior Tests', () => {
     await page.waitForTimeout(2000);
     const statusCell = alert.page.locator('tr:has-text("Status") td').last();
     await expect(statusCell).toContainText('bad');
+
+    await alertHelper.findAlertRowInContextListing(alert.context, alert.name);
+    alertHelper.deleteAlertFromAlertDetail()
   });
 
   test('T37 - alert with results above threshold shows bad status', async ({ page }) => {
     // Create alert that returns many results (above threshold)
+    const randomId = Math.random().toString(36).substring(7);
     const alert = await alertHelper.createTestAlert({
       name: 'Bad Status Test',
       query: 'SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6', // 6 rows
-      threshold: '4' // Threshold is 4, so 6 rows = bad
+      threshold: '4', // Threshold is 4, so 6 rows = bad
+      context: 'T37'
     });
 
     await expect(alert.page.locator('h1')).toContainText('Bad Status Test');
@@ -146,5 +169,7 @@ test.describe('Alert Status Behavior Tests', () => {
     await page.waitForTimeout(2000);
     const statusCell = alert.page.locator('tr:has-text("Status") td').last();
     await expect(statusCell).toContainText('bad');
+    await alertHelper.findAlertRowInContextListing(alert.context, alert.name);
+    alertHelper.deleteAlertFromAlertDetail()
   });
 });

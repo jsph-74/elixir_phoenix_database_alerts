@@ -37,7 +37,7 @@ data_sources = [
     name: "ecommerce_mysql",
     display_name: "E-commerce Analytics Database",
     driver: "MariaDB Unicode",
-    server: "host.docker.internal",
+    server: "test-mysql",
     database: "test",
     username: "root",
     password: "mysql",
@@ -48,11 +48,11 @@ data_sources = [
     name: "investment_postgres",
     display_name: "Investment Portfolio Database",
     driver: "PostgreSQL Unicode",
-    server: "host.docker.internal",
+    server: "test-postgres",
     database: "test",
     username: "postgres",
     password: "postgres",
-    port: 5433,
+    port: 5432,
     additional_params: %{}
   },
   # Broken data source for E2E validation testing

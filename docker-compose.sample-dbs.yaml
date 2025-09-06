@@ -1,11 +1,17 @@
 # External read only test databases for dev and test environments to connect to
 # These run outside the Docker Swarm and are shared between environments
 
+networks:
+  alerts-shared:
+    external: true
+
 services:
   test-mysql:
     image: mysql:latest
     ports:
       - "3306:3306"
+    networks:
+      - alerts-shared
     environment:
       - MYSQL_ROOT_PASSWORD=mysql
       - MYSQL_DATABASE=test
@@ -20,6 +26,8 @@ services:
     image: postgres:latest  
     ports:
       - "5433:5432"
+    networks:
+      - alerts-shared
     environment:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=test

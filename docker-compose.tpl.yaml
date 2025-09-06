@@ -5,7 +5,7 @@ services:
     image: postgres
     environment:
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=alerts
+      - POSTGRES_DB=alerts_{{ENV}}
     command: ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=256MB"]
     ports:
       - "{{DB_PORT}}:5432"
@@ -20,8 +20,7 @@ services:
     environment:
       DATABASE_USER: postgres
       DATABASE_PASSWORD: postgres
-      DATABASE_NAME: alerts
-      ENABLE_SSL: "false"
+      DATABASE_NAME: alerts_{{ENV}}
       PHX_HOST: localhost
       SESSION_TIMEOUT_MINUTES: "10"
       MIX_ENV: {{ENV}}
@@ -46,23 +45,34 @@ services:
         target: /nonexistent
       - /app/deps
       - /app/_build
-      - /app/priv/ssl
+      - type: volume
+        source: alerts-ssl-{{ENV}}
+        target: /app/priv/ssl
     command: ["./bin/boot.sh"]
 
-  playwright:
-    image: elixir_alerts-playwright
+{{IF_DEV_TEST}}  playwright:
+    image: elixir_alerts-playwright:latest
+    command: ["tail", "-f", "/dev/null"]
+    working_dir: /tests
     environment:
       - DATA_SOURCE_ENCRYPTION_KEY={{ENCRYPTION_KEY_VALUE}}
+      - BASE_URL=http://web-{{ENV}}:{{HTTP_PORT}}
+      - ALERTS_DB_HOST=db-{{ENV}}
+      - ALERTS_DB_NAME=alerts_{{ENV}}
     volumes:
       - type: bind
         source: ./e2e-tests
-        target: /app/e2e-tests
+        target: /tests{{END_IF_DEV_TEST}}
 
 volumes:
   alerts-postgres-data-{{ENV}}:
   alerts-elixir-home:
+  alerts-ssl-{{ENV}}:
 
-# No custom networks - use default bridge networking
+{{IF_DEV_TEST}}networks:
+  default:
+    name: alerts-shared
+    external: true{{END_IF_DEV_TEST}}
 
 secrets:
   {{ENCRYPTION_SECRET_NAME}}:

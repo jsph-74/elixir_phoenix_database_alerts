@@ -12,7 +12,7 @@ defmodule Alerts.Factory do
       name: "test_source_#{unique_id}",
       display_name: "Test Data Source #{unique_id}",
       driver: "MariaDB Unicode",
-      server: "host.docker.internal",
+      server: "test-mysql",
       database: "test",
       username: "root",
       password: "mysql",
