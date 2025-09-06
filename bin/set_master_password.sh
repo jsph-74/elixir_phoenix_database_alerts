@@ -8,7 +8,7 @@ set -e
 ENVIRONMENT="${1:-dev}"
 
 # Source shared functions
-source "$(dirname "$0")/../functions.sh"
+source "$(dirname "$0")/helpers/functions.sh"
 
 # Validate environment
 case "$ENVIRONMENT" in
@@ -65,17 +65,21 @@ print_status "🧹 Cleaning up old master password secrets..." $YELLOW
 OLD_SECRETS=$(docker secret ls --format "{{.Name}}" | grep "^master_password_" | grep -v "$SECRET_NAME" || true)
 if [ -n "$OLD_SECRETS" ]; then
     echo "$OLD_SECRETS" | while read -r old_secret; do
-        if docker secret rm "$old_secret" 2>/dev/null; then
-            echo "  • Removed: $old_secret"
-        fi
+        docker secret rm "$old_secret" 2>/dev/null;
     done
-else
-    echo "  • No old secrets to clean up"
 fi
 
 print_status "✅ Master password secret created: $SECRET_NAME" $GREEN
-print_status "⚠️  Remember to restart the environment to use new secret:" $YELLOW
-echo "   ./bin/startup.sh $ENVIRONMENT --reboot"
+
+# Get existing secret names for compose generation
+DB_ENCRYPTION_SECRET_NAME=$(./bin/helpers/crypto/get_secret_name.sh "$ENVIRONMENT" db_encryption_key)
+SECRET_SECRET_NAME=$(./bin/helpers/crypto/get_secret_name.sh "$ENVIRONMENT" secret_key_base)
+
+# Generate compose file and reboot
+./bin/helpers/docker/create_docker_compose.sh "$ENVIRONMENT" "$DB_ENCRYPTION_SECRET_NAME" "$SECRET_SECRET_NAME" "$SECRET_NAME"
+./bin/startup.sh "$ENVIRONMENT" --reboot
+
+print_status "✅ DONE"
 
 # Clear sensitive variables
 unset password password_confirm PASSWORD_HASH

@@ -52,7 +52,7 @@ if ! docker stack ls | grep -q "$STACK_NAME"; then
 fi
 
 # External test databases should be running for E2E tests
-print_status "✅ Using external test databases (mysql:3306, postgres:5433)" $GREEN
+print_status "✅ Using external sample databases (mysql:3306, postgres:5433)" $GREEN
 
 # Wait for the web application to be ready
 BASE_URL=$(get_base_url "$MIX_ENV" "http")

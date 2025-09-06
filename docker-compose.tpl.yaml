@@ -29,12 +29,10 @@ services:
       HTTPS_PORT: "{{HTTPS_PORT}}"
       HTTP_PORT: "{{HTTP_PORT}}"
     secrets:
-      - source: {{ENCRYPTION_SECRET_NAME}}
+      - source: {{DB_ENCRYPTION_SECRET_NAME}}
         target: data_source_encryption_key
       - source: {{SECRET_SECRET_NAME}}
-        target: secret_key_base
-      - source: {{MASTER_PASSWORD_SECRET_NAME}}
-        target: master_password
+        target: secret_key_base{{MASTER_PASSWORD_MOUNT}}
     volumes:
       - type: bind
         source: ./alerts
@@ -71,15 +69,9 @@ volumes:
   alerts-elixir-home:
   alerts-ssl-{{ENV}}:
 
-{{IF_DEV_TEST}}networks:
-  default:
-    name: alerts-shared
-    external: true{{END_IF_DEV_TEST}}
 
 secrets:
-  {{ENCRYPTION_SECRET_NAME}}:
+  {{DB_ENCRYPTION_SECRET_NAME}}:
     external: true
   {{SECRET_SECRET_NAME}}:
-    external: true
-  {{MASTER_PASSWORD_SECRET_NAME}}:
-    external: true
+    external: true{{MASTER_PASSWORD_SECRET}}

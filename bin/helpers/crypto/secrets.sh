@@ -14,67 +14,39 @@ echo "==================================================="
 
 # Check if Docker Swarm is initialized
 if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -q "^active$"; then
-    echo -e "${YELLOW}⚠️  Docker Swarm is not initialized. Initializing now...${NC}"
     docker swarm init --advertise-addr 127.0.0.1 >/dev/null 2>&1
-    echo -e "${GREEN}✅ Docker Swarm initialized${NC}"
-else
-    echo -e "${GREEN}✅ Docker Swarm already initialized${NC}"
 fi
 
-echo -e "${BLUE}📂 Working with Docker secrets only (no host files)${NC}"
+# Get existing secret names
+EXISTING_ENCRYPTION_SECRET=$(./bin/helpers/crypto/get_secret_name.sh "$MIX_ENV" db_encryption_key)
+if [ -n "$EXISTING_ENCRYPTION_SECRET" ]; then
+    OLD_DB_ENCRYPTION_KEY=$(docker secret inspect $EXISTING_ENCRYPTION_SECRET --format '{{.Spec.Data}}' | base64 -d 2>/dev/null || echo "")
+fi
 
-# Generate encryption key directly (no host files)
-ENCRYPTION_KEY=$(openssl rand -base64 32)
-echo -e "${GREEN}✅ Generated encryption key${NC}"
-
-# Create timestamped secret name
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-ENCRYPTION_SECRET_NAME="data_source_encryption_key_${TIMESTAMP}"
 
-# Clean up old secrets for this environment
-echo -e "${YELLOW}🧹 Cleaning up old secrets for $MIX_ENV...${NC}"
-docker secret ls --format "{{.Name}}" | grep "^data_source_encryption_key_" | while read secret; do
-    docker secret rm "$secret" 2>/dev/null || true
-done
-docker secret ls --format "{{.Name}}" | grep "^secret_key_base_" | while read secret; do
-    docker secret rm "$secret" 2>/dev/null || true
-done
+# Generate new encryption key
+NEW_DB_ENCRYPTION_KEY=$(openssl rand -base64 32)
+DB_ENCRYPTION_SECRET_NAME="data_source_encryption_key_${TIMESTAMP}"
+echo "$NEW_DB_ENCRYPTION_KEY" | docker secret create "$DB_ENCRYPTION_SECRET_NAME" - >/dev/null
 
-echo -e "${BLUE}🔑 Creating encryption key secret: $ENCRYPTION_SECRET_NAME${NC}"
-echo "$ENCRYPTION_KEY" | docker secret create "$ENCRYPTION_SECRET_NAME" - >/dev/null
-
-# Generate SECRET_KEY_BASE based on environment
-if [ "$MIX_ENV" = "prod" ]; then
-    # For production, generate a secure key
-    SECRET_KEY_BASE=$(openssl rand -base64 64)
-else
-    # For dev/test, generate a key
-    SECRET_KEY_BASE=$(openssl rand -base64 64)
-fi
-
+# Save new secret key base as Docker secret
+SECRET_KEY_BASE=$(openssl rand -base64 64)
 SECRET_SECRET_NAME="secret_key_base_${TIMESTAMP}"
-echo -e "${BLUE}🔑 Creating secret key base secret: $SECRET_SECRET_NAME${NC}"
 echo "$SECRET_KEY_BASE" | docker secret create "$SECRET_SECRET_NAME" - >/dev/null
 
 echo
 echo -e "${GREEN}✅ Docker Swarm secrets created successfully!${NC}"
 echo
 echo -e "${BLUE}📋 Created secrets:${NC}"
-echo "  • $ENCRYPTION_SECRET_NAME"
+echo "  • $DB_ENCRYPTION_SECRET_NAME"
 echo "  • $SECRET_SECRET_NAME"
 
-# Check for existing master password secret
-MASTER_PASSWORD_SECRET_NAME=""
-EXISTING_MASTER_SECRET=$(docker secret ls --format "{{.Name}}" | grep "^master_password_" | head -n 1 || true)
-if [ -n "$EXISTING_MASTER_SECRET" ]; then
-    MASTER_PASSWORD_SECRET_NAME="$EXISTING_MASTER_SECRET"
+# Get existing master password secrer
+MASTER_PASSWORD_SECRET_NAME=$(./bin/helpers/crypto/get_secret_name.sh "$MIX_ENV" master_password)
+if [ -n "$MASTER_PASSWORD_SECRET_NAME" ]; then
     echo -e "${GREEN}✅ Found existing master password secret: $MASTER_PASSWORD_SECRET_NAME${NC}"
-else
-    echo -e "${YELLOW}⚠️  No master password secret found. Run setup_master_password.sh if needed.${NC}"
 fi
 
-# Export for use by other scripts
-export ENCRYPTION_SECRET_NAME
-export SECRET_SECRET_NAME  
-export ENCRYPTION_KEY
-export MASTER_PASSWORD_SECRET_NAME
+# Export key for rotation scripts
+export NEW_DB_ENCRYPTION_KEY

@@ -34,8 +34,8 @@ if [ -z "$WEB_CONTAINER" ]; then
     exit 1
 fi
 
-# External test databases should be running already
-echo "✅ Using external test databases (mysql:3306, postgres:5433)"
+# External sample databases should be running already
+echo "✅ Using external sample databases (mysql:3306, postgres:5433)"
 
 
 # Run the tests

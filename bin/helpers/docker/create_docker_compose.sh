@@ -1,8 +1,11 @@
 #!/bin/bash
 set -e
 
-# Get environment parameter (default: dev)
+# Usage: create_docker_compose.sh <env> [db_encryption_secret] [secret_key_base_secret] [master_password_secret]
 ENV="${1:-dev}"
+DB_ENCRYPTION_SECRET_NAME="$2"
+SECRET_SECRET_NAME="$3"
+MASTER_PASSWORD_SECRET_NAME="$4"
 
 # Source shared functions
 source "$(dirname "$0")/../functions.sh"
@@ -21,15 +24,30 @@ case "$ENV" in
     *) DB_PORT="5432" ;;
 esac
 
+# Get secret names from helper if not provided as parameters
+if [ -z "$DB_ENCRYPTION_SECRET_NAME" ]; then
+    DB_ENCRYPTION_SECRET_NAME=$($(dirname "$0")/../crypto/get_secret_name.sh "$ENV" db_encryption_key)
+fi
+if [ -z "$SECRET_SECRET_NAME" ]; then
+    SECRET_SECRET_NAME=$($(dirname "$0")/../crypto/get_secret_name.sh "$ENV" secret_key_base)
+fi
+if [ -z "$MASTER_PASSWORD_SECRET_NAME" ]; then
+    MASTER_PASSWORD_SECRET_NAME=$($(dirname "$0")/../crypto/get_secret_name.sh "$ENV" master_password)
+fi
 
-# Check if required secret variables are set
-if [ -z "$ENCRYPTION_SECRET_NAME" ] || [ -z "$SECRET_SECRET_NAME" ]; then
-    print_status "❌ Secret names not set. Run secrets.sh first" $RED
+# Check if required secret names are available
+if [ -z "$DB_ENCRYPTION_SECRET_NAME" ] || [ -z "$SECRET_SECRET_NAME" ]; then
+    print_status "❌ Secret names not found. Run secrets.sh first" $RED
     exit 1
 fi
 
-# Master password secret is optional - use placeholder if not set
-MASTER_PASSWORD_SECRET_NAME="${MASTER_PASSWORD_SECRET_NAME:-master_password_placeholder}"
+# Master password secret is optional - skip if not set
+if [ -z "$MASTER_PASSWORD_SECRET_NAME" ]; then
+    MASTER_PASSWORD_SECRET_NAME="master_password_placeholder"
+    SKIP_MASTER_PASSWORD=true
+else
+    SKIP_MASTER_PASSWORD=false
+fi
 
 # Generate environment-specific docker-compose file from template
 # Use multiple sed commands to avoid character escaping issues
@@ -46,9 +64,25 @@ sed -i "" "s/{{HTTP_PORT}}/$HTTP_PORT/g" docker-compose-${ENV}.yaml
 sed -i "" "s/{{HTTPS_PORT}}/$HTTPS_PORT/g" docker-compose-${ENV}.yaml
 sed -i "" "s/{{DB_PORT}}/$DB_PORT/g" docker-compose-${ENV}.yaml
 sed -i "" "s/{{DATABASE_NAME}}/alerts_$ENV/g" docker-compose-${ENV}.yaml
-sed -i "" "s/{{ENCRYPTION_SECRET_NAME}}/$ENCRYPTION_SECRET_NAME/g" docker-compose-${ENV}.yaml
+sed -i "" "s/{{DB_ENCRYPTION_SECRET_NAME}}/$DB_ENCRYPTION_SECRET_NAME/g" docker-compose-${ENV}.yaml
 sed -i "" "s/{{SECRET_SECRET_NAME}}/$SECRET_SECRET_NAME/g" docker-compose-${ENV}.yaml
-sed -i "" "s/{{MASTER_PASSWORD_SECRET_NAME}}/$MASTER_PASSWORD_SECRET_NAME/g" docker-compose-${ENV}.yaml
+# Handle master password conditionally
+if [ "$SKIP_MASTER_PASSWORD" = "true" ]; then
+    # Remove master password placeholders
+    sed -i "" "s/{{MASTER_PASSWORD_MOUNT}}//g" docker-compose-${ENV}.yaml
+    sed -i "" "s/{{MASTER_PASSWORD_SECRET}}//g" docker-compose-${ENV}.yaml
+else
+    # Replace master password placeholders with actual content
+    MASTER_PASSWORD_MOUNT="
+      - source: $MASTER_PASSWORD_SECRET_NAME
+        target: master_password"
+    MASTER_PASSWORD_SECRET="
+  $MASTER_PASSWORD_SECRET_NAME:
+    external: true"
+    
+    sed -i "" "s|{{MASTER_PASSWORD_MOUNT}}|$MASTER_PASSWORD_MOUNT|g" docker-compose-${ENV}.yaml
+    sed -i "" "s|{{MASTER_PASSWORD_SECRET}}|$MASTER_PASSWORD_SECRET|g" docker-compose-${ENV}.yaml
+fi
 
 # Handle ENCRYPTION_KEY_VALUE separately with a different delimiter to avoid base64 issues
 sed -i "" "s|{{ENCRYPTION_KEY_VALUE}}|$ENCRYPTION_KEY|g" docker-compose-${ENV}.yaml
@@ -68,6 +102,6 @@ echo "  • Environment: $ENV"
 echo "  • HTTP Port: $HTTP_PORT"  
 echo "  • HTTPS Port: $HTTPS_PORT"
 echo "  • Database Port: $DB_PORT"
-echo "  • Encryption Secret: $ENCRYPTION_SECRET_NAME"
+echo "  • Encryption Secret: $DB_ENCRYPTION_SECRET_NAME"
 echo "  • Secret Key Secret: $SECRET_SECRET_NAME"
 echo "  • Master Password Secret: $MASTER_PASSWORD_SECRET_NAME"

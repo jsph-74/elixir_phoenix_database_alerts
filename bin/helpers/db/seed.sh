@@ -24,7 +24,7 @@ if [ -z "$WEB_CONTAINER" ]; then
     exit 1
 fi
 
-# Start external test databases (needed for seeding)
+# Start external sample databases (needed for seeding)
 ./bin/helpers/db/start_sample_dbs.sh
 
 print_status "🌱 Seeding ${MIX_ENV} database..." $YELLOW

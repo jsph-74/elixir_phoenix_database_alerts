@@ -30,21 +30,20 @@ Local development with hot reload and debugging capabilities.
 
 ### Setup & Run
 
-**Prerequisites:** Start external test databases (shared between dev/test environment, needed for seeding)
+**Setup & Start:**
 ```bash
-./bin/helpers/db/start_sample_dbs.sh
+# Full setup from scratch (recommended)
+./bin/init.sh dev
+
+# Manual step-by-step (if you need granular control)
+./bin/helpers/crypto/secrets.sh dev                    # Create application secrets
+./bin/helpers/docker/create_docker_compose.sh dev      # Generate compose file
+./bin/build.sh dev                                      # Build Docker image (required first time)
+./bin/startup.sh dev                                    # Start environment
+./bin/helpers/db/seed.sh dev                           # Seed database with sample data
 ```
 
-**Then start dev environment:**
-```bash
-# Full sequence (initialize, build, start, seed with test data)
-./bin/init.sh dev && ./bin/startup.sh dev && sleep 20 && ./bin/helpers/db/seed.sh dev
-
-# Or step by step:
-./bin/init.sh dev                    # Initialize: create secrets, generate compose, build image
-./bin/startup.sh dev                 # Start environment
-./bin/helpers/db/seed.sh dev         # Seed database with sample data
-```
+*Note: `./bin/init.sh` automatically handles sample databases, secrets, building, and starting*
 **→ Access at http://localhost:4000**
 
 ### With SSL (Optional)
@@ -58,6 +57,22 @@ Local development with hot reload and debugging capabilities.
 **→ Access at https://localhost:4001 (HTTPS) or http://localhost:4000 (HTTP) - both work independently**
 
 *Note: Self-signed certificates will show browser security warnings - click through to proceed.*
+
+### Secret Rotation (Existing Environment)
+
+Rotate encryption keys and update encrypted data automatically:
+
+```bash
+# Rotate all secrets (encryption key + secret key base + database data)
+./bin/rotate_secrets.sh dev
+
+# Or rotate master password only
+./bin/helpers/crypto/setup_master_password.sh dev
+./bin/helpers/docker/create_docker_compose.sh dev
+./bin/startup.sh dev --reboot
+```
+
+*Note: `rotate_secrets.sh` automatically handles: extracting old key, creating new secrets, rotating encrypted database data, updating compose file, and restarting.*
 
 ### Stop Environment
 ```bash
@@ -79,29 +94,28 @@ Automated testing with clean database state and E2E browser tests.
 
 ### Setup & Run
 
-**Prerequisites:** Start external test databases (if not already running from dev setup)
+**Setup & Start:**
 ```bash
-./bin/helpers/db/start_sample_dbs.sh
+# Full setup from scratch (recommended)
+./bin/init.sh test
+
+# Manual step-by-step (if you need granular control)
+./bin/helpers/crypto/secrets.sh test                   # Create application secrets  
+./bin/helpers/docker/create_docker_compose.sh test     # Generate compose file
+./bin/build.sh test                                     # Build Docker image (required first time)
+./bin/startup.sh test                                   # Start environment
+./bin/helpers/db/seed.sh test                          # Seed database with sample data
 ```
 
-**Then start test environment:**
-```bash
-# Full sequence (initialize, build, start, seed with test data)
-./bin/init.sh test && ./bin/startup.sh test && sleep 20 && ./bin/helpers/db/seed.sh test
-
-# Or step by step:
-./bin/init.sh test                   # Initialize: create secrets, generate compose, build image
-./bin/startup.sh test                # Start environment
-./bin/helpers/db/seed.sh test        # Seed database with sample data
-```
+*Note: `./bin/init.sh` automatically handles sample databases, secrets, building, and starting*
 **→ Access at http://localhost:4002**
 
 ### Run Tests
 
 **Prerequisites:** Test environment must be running first
 ```bash
-# Start test environment (if not already running)
-./bin/init.sh test && ./bin/startup.sh test
+# Start test environment (if not already running) 
+./bin/init.sh test
 ```
 
 **Then run tests:**
@@ -124,14 +138,18 @@ Production-ready deployment with security hardening and SSL/HTTPS.
 
 ### Setup & Run
 ```bash
-# Full sequence (initialize, build, start - no seeding in prod)
-./bin/init.sh prod && ./bin/startup.sh prod
+# Full setup from scratch (recommended)
+./bin/init.sh prod
 
-# Or step by step:
-./bin/init.sh prod        # Initialize: create secrets, generate compose, build image
-./bin/startup.sh prod     # Start environment
+# Manual step-by-step (if you need granular control)
+./bin/helpers/crypto/secrets.sh prod                   # Create application secrets
+./bin/helpers/docker/create_docker_compose.sh prod     # Generate compose file  
+./bin/build.sh prod                                     # Build Docker image (required first time)
+./bin/startup.sh prod                                   # Start environment
 # Note: No seeding in prod - add data through web interface
 ```
+
+*Note: `./bin/init.sh` handles secrets, building, and starting (no sample databases in prod)*
 **→ Access at http://localhost:4004**
 
 ### SSL Configuration (Required)
@@ -165,8 +183,10 @@ sudo certbot certonly --standalone -d yourdomain.com
 
 ### Security Management
 ```bash
-# Secrets are managed through Docker Swarm
-# To rotate secrets, run init again to generate new ones
+# Rotate all secrets (encryption key + secret key base + database data)
+./bin/rotate_secrets.sh prod
+
+# Or full re-initialization (generates new secrets but doesn't rotate existing data)
 ./bin/init.sh prod
 ```
 
@@ -182,22 +202,26 @@ Add application-level password protection requiring login to access the web inte
 
 **Setup Master Password:**
 ```bash
-# Set up master password first, then initialize
+# Set up master password first, then build and start
 ./bin/helpers/crypto/setup_master_password.sh dev
-./bin/init.sh dev
-./bin/startup.sh dev
+./bin/helpers/crypto/secrets.sh dev                    # Create app secrets
+./bin/helpers/docker/create_docker_compose.sh dev      # Generate compose (detects master password)
+./bin/build.sh dev                                      # Build image (first time only)
+./bin/startup.sh dev                                    # Start
 ```
 
 **For production:**
 ```bash
-# Set up master password and initialize
+# Set up master password and build environment
 ./bin/helpers/crypto/setup_master_password.sh prod
-./bin/init.sh prod
+./bin/helpers/crypto/secrets.sh prod
+./bin/helpers/docker/create_docker_compose.sh prod
+./bin/build.sh prod                                     # Build image (first time only)
 ./bin/startup.sh prod
 ```
 
 **Requirements:**
-- Docker Swarm initialized (done automatically by init.sh)
+- Docker Swarm initialized (done automatically by secrets.sh)
 - Password must be at least 8 characters
 - Interactive confirmation required
 
@@ -206,8 +230,8 @@ Add application-level password protection requiring login to access the web inte
 # Remove all master password secrets
 docker secret rm $(docker secret ls --format "{{.Name}}" | grep "^master_password_")
 
-# Reinitialize without master password (will detect absence and use placeholder)
-./bin/init.sh dev
+# Regenerate compose without master password (will use placeholder)
+./bin/helpers/docker/create_docker_compose.sh dev
 
 # Restart to disable authentication
 ./bin/startup.sh dev --reboot
