@@ -63,7 +63,18 @@ echo -e "${BLUE}📋 Created secrets:${NC}"
 echo "  • $ENCRYPTION_SECRET_NAME"
 echo "  • $SECRET_SECRET_NAME"
 
+# Check for existing master password secret
+MASTER_PASSWORD_SECRET_NAME=""
+EXISTING_MASTER_SECRET=$(docker secret ls --format "{{.Name}}" | grep "^master_password_" | head -n 1 || true)
+if [ -n "$EXISTING_MASTER_SECRET" ]; then
+    MASTER_PASSWORD_SECRET_NAME="$EXISTING_MASTER_SECRET"
+    echo -e "${GREEN}✅ Found existing master password secret: $MASTER_PASSWORD_SECRET_NAME${NC}"
+else
+    echo -e "${YELLOW}⚠️  No master password secret found. Run setup_master_password.sh if needed.${NC}"
+fi
+
 # Export for use by other scripts
 export ENCRYPTION_SECRET_NAME
 export SECRET_SECRET_NAME  
 export ENCRYPTION_KEY
+export MASTER_PASSWORD_SECRET_NAME

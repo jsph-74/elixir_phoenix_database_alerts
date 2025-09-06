@@ -182,21 +182,18 @@ Add application-level password protection requiring login to access the web inte
 
 **Setup Master Password:**
 ```bash
-# 1. Create master password (interactive secure input)
+# Set up master password first, then initialize
 ./bin/helpers/crypto/setup_master_password.sh dev
-
-# 2. Update docker-compose with new master password secret
-./bin/helpers/docker/create_docker_compose.sh dev
-
-# 3. Restart environment to use master password
-./bin/startup.sh dev --reboot
+./bin/init.sh dev
+./bin/startup.sh dev
 ```
 
 **For production:**
 ```bash
+# Set up master password and initialize
 ./bin/helpers/crypto/setup_master_password.sh prod
-./bin/helpers/docker/create_docker_compose.sh prod  
-./bin/startup.sh prod --reboot
+./bin/init.sh prod
+./bin/startup.sh prod
 ```
 
 **Requirements:**
@@ -209,8 +206,8 @@ Add application-level password protection requiring login to access the web inte
 # Remove all master password secrets
 docker secret rm $(docker secret ls --format "{{.Name}}" | grep "^master_password_")
 
-# Update compose to use placeholder  
-./bin/helpers/docker/create_docker_compose.sh dev
+# Reinitialize without master password (will detect absence and use placeholder)
+./bin/init.sh dev
 
 # Restart to disable authentication
 ./bin/startup.sh dev --reboot
