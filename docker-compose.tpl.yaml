@@ -33,6 +33,8 @@ services:
         target: data_source_encryption_key
       - source: {{SECRET_SECRET_NAME}}
         target: secret_key_base
+      - source: {{MASTER_PASSWORD_SECRET_NAME}}
+        target: master_password
     volumes:
       - type: bind
         source: ./alerts
@@ -78,4 +80,6 @@ secrets:
   {{ENCRYPTION_SECRET_NAME}}:
     external: true
   {{SECRET_SECRET_NAME}}:
+    external: true
+  {{MASTER_PASSWORD_SECRET_NAME}}:
     external: true

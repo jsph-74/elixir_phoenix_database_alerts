@@ -1,86 +1,67 @@
 defmodule Alerts.Business.MasterPassword do
   @moduledoc """
-  Master Password management for application security.
+  Master Password management using Docker secrets for application security.
   """
 
-  import Ecto.Query
-  alias Alerts.Repo
-  alias Alerts.Business.DB.AppSecurity
-  alias Alerts.Encryption
+  require Logger
 
-  @master_password_key "master_password"
+  @master_password_secret_path "/run/secrets/master_password"
 
   @doc """
-  Sets up a master password by encrypting and storing it in the database.
+  Validates a master password against the stored Docker secret.
+  Returns {:ok, :valid}, {:ok, :no_password_set}, or {:error, :invalid}
   """
-  def setup_master_password(plain_password) do
-    # Hash the password before encrypting
-    password_hash = :crypto.hash(:sha256, plain_password) |> Base.encode64()
-    
-    # Encrypt the hash using the existing encryption key
-    encrypted_password = Encryption.encrypt(password_hash)
-    
-    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-    
-    attrs = %{
-      key_type: @master_password_key,
-      encrypted_value: encrypted_password,
-      created_at: now,
-      last_changed: now
-    }
-
-    # Delete existing master password if it exists
-    Repo.delete_all(from a in AppSecurity, where: a.key_type == ^@master_password_key)
-    
-    # Insert new master password
-    %AppSecurity{}
-    |> AppSecurity.changeset(attrs)
-    |> Repo.insert()
-  end
-
-  @doc """
-  Validates a master password against the stored encrypted version.
-  Returns {:ok, :valid} or {:error, :invalid}
-  """
-  def validate_master_password(plain_password) do
-    case get_master_password_record() do
-      nil ->
+  def validate_master_password(plain_password) when is_binary(plain_password) do
+    case read_master_password_secret() do
+      {:ok, stored_hash} ->
+        # Hash the provided password with SHA-256
+        provided_hash = :crypto.hash(:sha256, plain_password) |> Base.encode16(case: :lower)
+        
+        if provided_hash == String.trim(stored_hash) do
+          {:ok, :valid}
+        else
+          {:error, :invalid}
+        end
+        
+      {:error, :not_configured} ->
         {:ok, :no_password_set}
         
-      record ->
-        # Hash the provided password
-        provided_hash = :crypto.hash(:sha256, plain_password) |> Base.encode64()
-        
-        # Decrypt the stored hash
-        try do
-          stored_hash = Encryption.decrypt(record.encrypted_value)
-          if provided_hash == stored_hash do
-            {:ok, :valid}
-          else
-            {:error, :invalid}
-          end
-        rescue
-          _error ->
-            {:error, :decryption_failed}
-        end
+      {:error, reason} ->
+        Logger.error("Failed to read master password secret: #{inspect(reason)}")
+        {:error, :secret_read_failed}
+    end
+  end
+
+  def validate_master_password(_), do: {:error, :invalid}
+
+  @doc """
+  Checks if a master password is configured via Docker secrets.
+  """
+  def master_password_configured? do
+    case read_master_password_secret() do
+      {:ok, hash} when is_binary(hash) and hash != "" -> true
+      _ -> false
     end
   end
 
   @doc """
-  Checks if a master password is configured.
+  Reads the master password hash from Docker secrets.
+  Returns {:ok, hash} or {:error, reason}
   """
-  def master_password_configured? do
-    get_master_password_record() != nil
-  end
-
-  @doc """
-  Removes the master password configuration.
-  """
-  def remove_master_password do
-    Repo.delete_all(from a in AppSecurity, where: a.key_type == ^@master_password_key)
-  end
-
-  defp get_master_password_record do
-    Repo.one(from a in AppSecurity, where: a.key_type == ^@master_password_key)
+  defp read_master_password_secret do
+    if File.exists?(@master_password_secret_path) do
+      case File.read(@master_password_secret_path) do
+        {:ok, content} when content != "" ->
+          {:ok, String.trim(content)}
+          
+        {:ok, ""} ->
+          {:error, :empty_secret}
+          
+        {:error, reason} ->
+          {:error, {:file_read_error, reason}}
+      end
+    else
+      {:error, :not_configured}
+    end
   end
 end

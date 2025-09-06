@@ -182,26 +182,44 @@ Add application-level password protection requiring login to access the web inte
 
 **Setup Master Password:**
 ```bash
-# Interactive setup (secure password input)
+# 1. Create master password (interactive secure input)
 ./bin/helpers/crypto/setup_master_password.sh dev
-./bin/helpers/crypto/setup_master_password.sh prod
 
-# Non-interactive setup
-./bin/helpers/crypto/setup_master_password.sh dev "your_secure_password"
+# 2. Update docker-compose with new master password secret
+./bin/helpers/docker/create_docker_compose.sh dev
+
+# 3. Restart environment to use master password
+./bin/startup.sh dev --reboot
+```
+
+**For production:**
+```bash
+./bin/helpers/crypto/setup_master_password.sh prod
+./bin/helpers/docker/create_docker_compose.sh prod  
+./bin/startup.sh prod --reboot
 ```
 
 **Requirements:**
-- Environment must be running (application started)
+- Docker Swarm initialized (done automatically by init.sh)
 - Password must be at least 8 characters
-- Confirmation required for interactive setup
+- Interactive confirmation required
+
+**Remove Master Password:**
+```bash
+# Remove all master password secrets
+docker secret rm $(docker secret ls --format "{{.Name}}" | grep "^master_password_")
+
+# Update compose to use placeholder  
+./bin/helpers/docker/create_docker_compose.sh dev
+
+# Restart to disable authentication
+./bin/startup.sh dev --reboot
+```
 
 **Configuration:**
 ```bash
-# Set session timeout (default: 10 minutes)
+# Set session timeout (default: 10 minutes)  
 SESSION_TIMEOUT_MINUTES=30 ./bin/startup.sh dev
-
-# Start with master password enabled
-./bin/startup.sh dev  # Automatically detects master password
 ```
 
 **User Experience:**
@@ -211,13 +229,12 @@ SESSION_TIMEOUT_MINUTES=30 ./bin/startup.sh dev
 - 🔄 Seamless redirect to login when session expires
 
 **Security Features:**
-- SHA-256 password hashing before encryption
-- AES-256-GCM encryption using existing encryption keys
+- SHA-256 password hashing stored in Docker Swarm secrets
 - Session-based authentication with CSRF protection
 - Configurable session timeout (environment variable)
 - Login screen protection for all routes
-- No environment variable bypasses
 - Secure logout clears all session data
+- Timestamped secret rotation for password updates
 
 ---
 
