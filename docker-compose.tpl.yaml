@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  db-{{ENV}}:
+    image: postgres
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=alerts_{{ENV}}
+    command: ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=256MB"]
+    ports:
+      - "{{DB_PORT}}:5432"
+    volumes:
+      - alerts-postgres-data-{{ENV}}:/var/lib/postgresql/data
+
+  web-{{ENV}}:
+    image: elixir_alerts-web-{{ENV}}
+    ports:
+      - "{{HTTP_PORT}}:{{HTTP_PORT}}"
+      - "{{HTTPS_PORT}}:{{HTTPS_PORT}}"
+    environment:
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: alerts_{{ENV}}
+      PHX_HOST: localhost
+      SESSION_TIMEOUT_MINUTES: "10"
+      MIX_ENV: {{ENV}}
+      PORT: "{{HTTP_PORT}}"
+      DATABASE_HOST: db-{{ENV}}
+      HTTPS_PORT: "{{HTTPS_PORT}}"
+      HTTP_PORT: "{{HTTP_PORT}}"
+    secrets:
+      - source: {{DB_ENCRYPTION_SECRET_NAME}}
+        target: data_source_encryption_key
+      - source: {{SECRET_SECRET_NAME}}
+        target: secret_key_base{{MASTER_PASSWORD_MOUNT}}
+    volumes:
+      - type: bind
+        source: ./alerts
+        target: /app
+      - type: bind
+        source: ./files
+        target: /files
+      - type: volume
+        source: alerts-elixir-home
+        target: /nonexistent
+      - /app/deps
+      - /app/_build
+      - type: volume
+        source: alerts-ssl-{{ENV}}
+        target: /app/priv/ssl
+    command: ["./bin/boot.sh"]
+
+{{IF_DEV_TEST}}  playwright:
+    image: elixir_alerts-playwright:latest
+    command: ["tail", "-f", "/dev/null"]
+    working_dir: /tests
+    environment:
+      - DATA_SOURCE_ENCRYPTION_KEY={{ENCRYPTION_KEY_VALUE}}
+      - BASE_URL=http://web-{{ENV}}:{{HTTP_PORT}}
+      - ALERTS_DB_HOST=db-{{ENV}}
+      - ALERTS_DB_NAME=alerts_{{ENV}}
+    volumes:
+      - type: bind
+        source: ./e2e-tests
+        target: /tests{{END_IF_DEV_TEST}}
+
+volumes:
+  alerts-postgres-data-{{ENV}}:
+  alerts-elixir-home:
+  alerts-ssl-{{ENV}}:
+
+
+secrets:
+  {{DB_ENCRYPTION_SECRET_NAME}}:
+    external: true
+  {{SECRET_SECRET_NAME}}:
+    external: true{{MASTER_PASSWORD_SECRET}}

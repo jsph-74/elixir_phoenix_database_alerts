@@ -37,10 +37,10 @@ data_sources = [
     name: "ecommerce_mysql",
     display_name: "E-commerce Analytics Database",
     driver: "MariaDB Unicode",
-    server: "test_mysql",
+    server: "test-mysql",
     database: "test",
-    username: "monitor_user",
-    password: "monitor_pass",
+    username: "root",
+    password: "mysql",
     port: 3306,
     additional_params: %{"CHARSET" => "UTF8"}
   },
@@ -48,11 +48,11 @@ data_sources = [
     name: "investment_postgres",
     display_name: "Investment Portfolio Database",
     driver: "PostgreSQL Unicode",
-    server: "test_postgres",
+    server: "test-postgres",
     database: "test",
-    username: "monitor_user",
-    password: "monitor_pass",
-    port: 5433,
+    username: "postgres",
+    password: "postgres",
+    port: 5432,
     additional_params: %{}
   },
   # Broken data source for E2E validation testing
@@ -60,10 +60,10 @@ data_sources = [
     name: "broken_mysql",
     display_name: "Broken MySQL Database", 
     driver: "MariaDB Unicode",
-    server: "test_mysql",
+    server: "elixir_alerts-test-mysql-1",
     database: "nonexistent_database",
-    username: "monitor_user",
-    password: "monitor_pass", 
+    username: "root",
+    password: "mysql", 
     port: 3306,
     additional_params: %{"CHARSET" => "UTF8"}
   }

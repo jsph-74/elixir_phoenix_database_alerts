@@ -20,6 +20,9 @@ files/*
 *.log
 *.tmp
 
+# Docker Compose files contain generated secret names
+docker-compose-*.yaml
+
 # E2E Test artifacts
 e2e-tests/test-results/
 e2e-tests/playwright-report/

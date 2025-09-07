@@ -8,7 +8,7 @@ export class TestDatabaseHelper {
   // For E2E tests we need write permissions, so use admin users
   async connectMySQL() {
     this.mysqlConnection = await mysql.createConnection({
-      host: 'test_mysql',
+      host: 'test-mysql',
       port: 3306,
       user: 'root',
       password: 'mysql',
@@ -18,10 +18,10 @@ export class TestDatabaseHelper {
 
   async connectPostgres() {
     this.pgClient = new Client({
-      host: 'test_postgres',
-      port: 5433,
+      host: 'test-postgres',
+      port: 5432,
       user: 'postgres',
-      password: 'test_password',
+      password: 'postgres',
       database: 'test'
     });
     await this.pgClient.connect();
@@ -104,13 +104,17 @@ export class TestDatabaseHelper {
 
   // Alert Management (requires connection to alerts PostgreSQL database)
   async connectAlertsDB() {
+    // Close any existing connection first
+    if (this.pgClient) {
+      await this.pgClient.end();
+    }
     // Connect to the alerts PostgreSQL database to manipulate alert records directly
     this.pgClient = new Client({
-      host: 'db', // alerts database host
+      host: process.env.ALERTS_DB_HOST || 'db-test', // alerts database host
       port: 5432,
       user: 'postgres',
       password: 'postgres',
-      database: 'alerts_test'
+      database: process.env.ALERTS_DB_NAME || 'alerts_test'
     });
     await this.pgClient.connect();
   }
@@ -127,7 +131,7 @@ export class TestDatabaseHelper {
     await this.connectAlertsDB();
     // Restore valid connection details
     await this.pgClient!.query(
-      `UPDATE data_sources SET server = 'test_mysql', port = 3306 WHERE display_name = 'E-commerce Analytics Database'`
+      `UPDATE data_sources SET server = 'test-mysql', port = 3306 WHERE display_name = 'E-commerce Analytics Database'`
     );
   }
 

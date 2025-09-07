@@ -1,0 +1,19 @@
+[0;34m🚀 Starting Development Environment[0m
+==================================================
+[0;34m📋 Using secrets:[0m
+  • Encryption: data_source_encryption_key_20250904_131137
+  • Secret Key: secret_key_base_20250904_131137
+[0;34m🚀 Deploying development stack...[0m
+Since --detach=false was not specified, tasks will be created in the background.
+In a future release, --detach=false will become the default.
+Creating network alerts-dev_default
+Creating service alerts-dev_db
+Creating service alerts-dev_web-dev
+
+[0;32m🔧 Development available at: http://localhost:4000[0m
+[0;32m🔒 HTTPS available at: https://localhost:4001 (if SSL configured)[0m
+
+[1;33mℹ️  Useful commands:[0m
+  • View logs: docker service logs -f alerts-dev_web-dev
+  • Remove stack: docker stack rm alerts-dev
+  • Initialize DB: ./bin/helpers/db/init_db.sh dev --seed

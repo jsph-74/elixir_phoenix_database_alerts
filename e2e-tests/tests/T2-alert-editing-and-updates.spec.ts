@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { navigateWithAuth } from '../helpers/auth';
 import { TestDatabaseHelper } from '../helpers/database';
 import { AlertTestHelper } from '../helpers/alert-helper';
 
@@ -21,15 +22,14 @@ test.describe('Alert Updates and Delete Tests', () => {
     // Use seeded alert for editing
     const alertRow = await alertHelper.findAlertRowInContextListing('test', '1-test-sql-diff-history');
     await alertRow.locator('a[href*="/edit"]').first().click();
-    
     await expect(page.locator('h1')).toContainText('Edit');
     
     // Update description
-    await page.fill('#alert_description', 'Updated description via T21');
+    await page.fill('#alert-edit-form_description', 'Updated description via T21');
     await page.click('#submit-btn');
     
     // Should redirect to alert detail
-    await expect(page.locator('h1')).toContainText('1-test-sql-diff-history');
+    await expect(page.locator('h1')).toContainText('1-test-sql-diff-history');    
   });
 
   test('T22 - should reject invalid cron format', async ({ page }) => {
@@ -40,7 +40,7 @@ test.describe('Alert Updates and Delete Tests', () => {
     await expect(page.locator('h1')).toContainText('Edit');
     
     // Try invalid cron format
-    await page.fill('#alert_schedule', 'not a valid cron');
+    await page.fill('#alert-edit-form_schedule', 'not a valid cron');
     await page.click('#submit-btn');
     
     // Should stay on edit page with error
@@ -58,7 +58,7 @@ test.describe('Alert Updates and Delete Tests', () => {
     await expect(page.locator('h1')).toContainText('Edit');
     
     // Update threshold
-    await page.fill('#alert_threshold', '15');
+    await page.fill('#alert-edit-form_threshold', '15');
     await page.click('#submit-btn');
     
     // Should redirect to alert detail
@@ -73,7 +73,7 @@ test.describe('Alert Updates and Delete Tests', () => {
     await expect(page.locator('h1')).toContainText('Edit');
     
     // Try to save invalid SQL
-    await page.fill('#alert_query', 'COMPLETELY BROKEN SQL SYNTAX');
+    await page.fill('#alert-edit-form_query', 'COMPLETELY BROKEN SQL SYNTAX');
     await page.click('#submit-btn');
     
     // Should stay on edit page with error
@@ -87,19 +87,19 @@ test.describe('Alert Updates and Delete Tests', () => {
     await alertRow.locator('a[href*="/edit"]').first().click();
     
     // Get initial values
-    const originalName = await page.inputValue('#alert_name');
-    const originalContext = await page.inputValue('#alert_context');
+    const originalName = await page.inputValue('#alert-edit-form_name');
+    const originalContext = await page.inputValue('#alert-edit-form_context');
     
     // Only change description
-    await page.fill('#alert_description', 'Only description changed');
+    await page.fill('#alert-edit-form_description', 'Only description changed');
     await page.click('#submit-btn');
     
     // Go back to edit to verify other fields preserved
     const alertRowAgain = await alertHelper.findAlertRowInContextListing('test', originalName);
     await alertRowAgain.locator('a[href*="/edit"]').first().click();
     
-    const newName = await page.inputValue('#alert_name');
-    const newContext = await page.inputValue('#alert_context');
+    const newName = await page.inputValue('#alert-edit-form_name');
+    const newContext = await page.inputValue('#alert-edit-form_context');
     
     expect(newName).toBe(originalName);
     expect(newContext).toBe(originalContext);
@@ -110,7 +110,8 @@ test.describe('Alert Updates and Delete Tests', () => {
     const alert = await alertHelper.createTestAlert({
       name: 'Delete Test Alert',
       query: 'SELECT 1 as delete_test',
-      threshold: '1'
+      threshold: '1',
+      context: 'T26'
     });
 
     const stayedOnForm = await alert.stayedOnForm();
@@ -119,15 +120,7 @@ test.describe('Alert Updates and Delete Tests', () => {
     await expect(alert.page.locator('h1')).toContainText('Delete Test Alert');
 
     // Delete button is on the detail page with specific classes
-    const deleteButton = alert.page.locator('a.btn-icon-danger[title="Delete alert"]');
-    await expect(deleteButton).toBeVisible();
-    
-    // Set up dialog handler before clicking
-    alert.page.on('dialog', async dialog => {
-      await dialog.accept();
-    });
-    
-    await deleteButton.click();
+    alertHelper.deleteAlertFromAlertDetail()
     
     // Wait for deletion to complete and redirect
     await alert.page.waitForTimeout(3000);
@@ -136,7 +129,7 @@ test.describe('Alert Updates and Delete Tests', () => {
     const currentUrl = alert.page.url();
     
     // Verify alert no longer appears in context listing  
-    await page.goto(`/alerts?context=${alert.context}`);
+    await navigateWithAuth(page, `/alerts?context=${alert.context}`);
     await page.waitForTimeout(1000); // Allow page to load
     
     // Use a more specific selector to avoid false positives

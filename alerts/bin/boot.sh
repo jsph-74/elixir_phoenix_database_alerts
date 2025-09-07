@@ -4,17 +4,18 @@ set -e
 # Install/update dependencies first
 mix local.hex --force --unsafe-https
 mix deps.get
+mix deps.compile
 
 # Wait for Postgres to become available
 export PGPASSWORD=postgres
-until psql -p 5432 -h alerts_db -U "postgres" -c '\q' 2>/dev/null; do
+until psql -h ${DATABASE_HOST:-db-dev} -U postgres -c '\q' 2>/dev/null; do
   >&2 echo "Postgres is unavailable - sleeping"
   sleep 1
 done
 
-# Setup database
-mix ecto.create -r Alerts.Repo --quiet
-mix ecto.migrate -r Alerts.Repo
+# Auto-setup database (create only if doesn't exist, always migrate)
+mix ecto.create --quiet || true
+mix ecto.migrate
 
 
 # Start Phoenix server

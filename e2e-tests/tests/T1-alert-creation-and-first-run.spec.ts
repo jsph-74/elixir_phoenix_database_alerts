@@ -50,7 +50,8 @@ test.describe('Alert Creation, Validation and First Run Tests', () => {
     const alert = await alertHelper.createTestAlert({
       name: alertName,
       query: 'SELECT 1 as test_count',
-      threshold: '0'
+      threshold: '0',
+      context: 'T12'
     });
     
     // Check if creation was successful (redirect to alerts) or failed (stayed on /new)
@@ -68,6 +69,9 @@ test.describe('Alert Creation, Validation and First Run Tests', () => {
     const statusCell = alert.page.locator('tr:has-text("Status") td').last(); // Get the value cell, not the label
     await expect(statusCell).toContainText('never run');
     await expect(statusCell).not.toContainText('since');
+
+    await alertHelper.findAlertRowInContextListing(alert.context, alert.name);
+    // TEMP: Disabled delete - alertHelper.deleteAlertFromAlertDetail()
   });
 
   test('T13 - alert creation shows proper initial date structure', async ({ page }) => {
@@ -135,7 +139,8 @@ test.describe('Alert Creation, Validation and First Run Tests', () => {
       name: 'M2H Connection Test',
       query: 'SELECT 1 as test_value',
       threshold: '0',
-      dataSourceLabel: 'Broken MySQL Database' // Use the seeded broken data source
+      dataSourceLabel: 'Broken MySQL Database', // Use the seeded broken data source
+      context: 'T15'
     });
     
     // M2H validation should prevent saving - MUST stay on form (check title)
@@ -153,7 +158,8 @@ test.describe('Alert Creation, Validation and First Run Tests', () => {
     const alert = await alertHelper.createTestAlert({
       name: 'M2H SQL Validation Test',
       query: 'TOTALLY INVALID SQL SYNTAX THAT MAKES NO SENSE',
-      threshold: '0'
+      threshold: '0',
+      context: 'T16'
       // Uses default working data source
     });
     
@@ -174,7 +180,8 @@ test.describe('Alert Creation, Validation and First Run Tests', () => {
       name: 'Another Connection Test',
       query: 'SELECT 2 as test_value',
       threshold: '0',
-      dataSourceLabel: 'Broken MySQL Database'
+      dataSourceLabel: 'Broken MySQL Database',
+      context: 'T17'
     });
     
     const stayedOnForm = await alert.stayedOnForm();

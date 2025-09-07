@@ -1,4 +1,5 @@
 import { Page, expect } from '@playwright/test';
+import { navigateWithAuth } from './auth';
 
 export interface AlertCreateOptions {
   name?: string;
@@ -28,22 +29,22 @@ export class AlertTestHelper {
       dataSourceLabel: options.dataSourceLabel || 'E-commerce Analytics Database' // Use seeded data source READ-ONLY
     };
 
-    await this.page.goto('/alerts/new');
+    await navigateWithAuth(this.page, '/alerts/new');
     
-    await this.page.fill('#alert_context', alertData.context);
-    await this.page.fill('#alert_name', alertData.name);
-    await this.page.fill('#alert_description', alertData.description);
+    await this.page.fill('#alert-form_context', alertData.context);
+    await this.page.fill('#alert-form_name', alertData.name);
+    await this.page.fill('#alert-form_description', alertData.description);
     
     // Use seeded data source (always available)
-    await this.page.selectOption('#alert_data_source_id', { label: alertData.dataSourceLabel });
+    await this.page.selectOption('#alert-form_data_source_id', { label: alertData.dataSourceLabel });
     
-    await this.page.fill('#alert_query', alertData.query);
-    await this.page.fill('#alert_threshold', alertData.threshold);
+    await this.page.fill('#alert-form_query', alertData.query);
+    await this.page.fill('#alert-form_threshold', alertData.threshold);
     
     await this.page.click('#submit-btn');
     
     // Wait for response and check for server errors
-    await this.page.waitForTimeout(1000);
+    await this.page.waitForLoadState('networkidle');
     const bodyText = await this.page.textContent('body');
     if (bodyText?.includes('Internal Server Error') || bodyText?.includes('500')) {
       throw new Error('Server error (500) occurred during alert creation');
@@ -65,7 +66,12 @@ export class AlertTestHelper {
    * Navigate to a test alert by context (never touches seed alerts)
    */
   async navigateToTestAlert(context: string, alertName: string) {
-    await this.page.goto(`/alerts?context=${context}`);
+    await navigateWithAuth(this.page, `/alerts?context=${context}`);
+    
+    // Click on the context tab to switch contexts
+    await this.page.click(`text=${context}`, { timeout: 5000 });
+    await this.page.waitForLoadState('networkidle');
+    
     const alertRow = this.page.locator('tr').filter({ hasText: alertName });
     await alertRow.locator('a').first().click();
     await expect(this.page.locator('h1')).toContainText(alertName);
@@ -75,7 +81,12 @@ export class AlertTestHelper {
    * Edit a test alert (never touches seed alerts)
    */
   async editTestAlert(context: string, alertName: string) {
-    await this.page.goto(`/alerts?context=${context}`);
+    await navigateWithAuth(this.page, `/alerts?context=${context}`);
+    
+    // Click on the context tab to switch contexts
+    await this.page.click(`text=${context}`, { timeout: 5000 });
+    await this.page.waitForLoadState('networkidle');
+    
     const alertRow = this.page.locator('tr').filter({ hasText: alertName });
     await alertRow.locator('a[href*="/edit"]').click();
   }
@@ -85,7 +96,7 @@ export class AlertTestHelper {
    */
   async runAlert() {
     await this.page.click('button[type="submit"][title="Run alert"]');
-    await this.page.waitForTimeout(2000); // Allow time for execution
+    await this.page.waitForLoadState('networkidle'); // Allow time for execution
   }
 
   /**
@@ -100,8 +111,14 @@ export class AlertTestHelper {
    * Navigate to context and find alert row in listing (READ-ONLY)
    */
   async findAlertRowInContextListing(contextName: string, alertName: string) {
-    await this.page.goto(`/alerts?context=${contextName}`);
+    await navigateWithAuth(this.page, `/alerts?context=${contextName}`);
+    
+    // Click on the context tab to switch contexts
+    await this.page.click(`text=${contextName}`, { timeout: 5000 });
+    
+    // Wait for table to update after context switch
     await expect(this.page.locator('table')).toBeVisible();
+    await this.page.waitForLoadState('networkidle'); // Wait for content to load
     
     // Check if the alert row exists
     const row = this.page.locator('tr').filter({ hasText: alertName });
@@ -122,6 +139,58 @@ export class AlertTestHelper {
     await expect(runButton).toBeVisible();
     await runButton.click();
   }
+
+  /**
+   * Delete alert from alert detail page
+   */
+  async deleteAlertFromAlertDetail() {
+     const deleteButton = this.page.locator('a.btn-icon-danger[title="Delete alert"]');
+    await expect(deleteButton).toBeVisible();
+    
+    // Set up dialog handler before clicking
+    this.page.on('dialog', async dialog => {
+      await dialog.accept();
+    });
+    
+    await deleteButton.click();
+    
+    // Wait for navigation after deletion
+    await this.page.waitForLoadState('networkidle');
+    
+  }
+
+  /**
+   * Runs alert and waits for completion by monitoring history count
+   */
+  async runAlertAndWaitForCompletion(expectedHistoryCount: number) {
+    // Click run alert button
+    await this.page.waitForSelector('button[title="Run alert"]', { state: 'visible', timeout: 10000 });
+    await this.page.click('button[title="Run alert"]');
+    
+    // Go to history tab first to monitor changes
+    const historyTab = this.page.locator('a[href="#query-history"]');
+    await historyTab.click();
+    await this.page.waitForLoadState('networkidle');
+    
+    // Wait for history entry count to increase (indicates completion)
+    await this.page.waitForFunction(
+      (expectedCount) => {
+        const entries = document.querySelectorAll('.timeline-event');
+        return entries.length >= expectedCount;
+      },
+      expectedHistoryCount,
+      { timeout: 30000, polling: 1000 }
+    );
+  }
+
+  /**
+   * Waits for alert status to change to expected value
+   */
+  async waitForAlertStatus(expectedStatus: string, timeout: number = 15000) {
+    const statusCell = this.page.locator('tr:has-text("Status") td').last();
+    await expect(statusCell).toContainText(expectedStatus, { timeout });
+  }
+  
 }
 
 export class HistoryTestHelper {
@@ -145,7 +214,7 @@ export class HistoryTestHelper {
       await historyTab.click({ force: true });
     }
     
-    await this.page.waitForTimeout(1000);
+    await this.page.waitForLoadState('networkidle');
   }
 
   async getHistoryEntryCount() {

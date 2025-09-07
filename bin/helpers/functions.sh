@@ -36,7 +36,6 @@ get_service_name() {
     esac
 }
 
-
 # Get HTTP port for environment
 get_http_port() {
     local env="${1:-dev}"
@@ -74,8 +73,38 @@ get_base_url() {
     echo "${protocol}://localhost:${port}"
 }
 
-# Docker container cleanup function
-docker_cleanup() {
-    print_status "🧹 Cleaning up containers..." $YELLOW
-    docker container prune -f > /dev/null 2>&1 
+# Check if container is running for given environment
+check_container_running() {
+    local env="${1:-dev}"
+    if ! docker ps -q -f "name=alerts-${env}_web-${env}" | grep -q .; then
+        print_status "❌ Container alerts-${env}_web-${env} is not running" $RED
+        echo "Start it first: ./bin/startup.sh $env"
+        exit 1
+    fi
+}
+
+# Initialize Docker Swarm if not already active
+init_docker_swarm() {
+    if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -q "^active$"; then
+        docker swarm init --advertise-addr 127.0.0.1 2>/dev/null || true
+    fi
+}
+
+# Wait for container to be fully ready (migrations complete)
+wait_for_container_ready() {
+    local env="${1:-dev}"
+    local port=$(get_http_port "$env")
+    
+    echo "⏳ Waiting for container to be fully ready..."
+    for i in {1..30}; do
+        if curl -s -f "http://localhost:$port" >/dev/null 2>&1; then
+            echo "✅ Container is ready"
+            return 0
+        fi
+        echo "Waiting for container... ($i/30)"
+        sleep 2
+    done
+    
+    print_status "❌ Container failed to become ready" $RED
+    exit 1
 }

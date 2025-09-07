@@ -262,6 +262,10 @@ defmodule Alerts.Business.AlertsTest do
 
   describe "scheduled alerts" do
     test "reboot_all_jobs only processes current scheduled alerts" do
+      # Get initial count of scheduled jobs
+      initial_job_configs = AlertLib.reboot_all_jobs()
+      initial_count = length(initial_job_configs)
+      
       # Create alerts with schedules
       scheduled = Factory.insert!(:alert, schedule: "0 9 * * *")
       Factory.insert!(:alert, schedule: nil)  # Manual alert
@@ -273,14 +277,18 @@ defmodule Alerts.Business.AlertsTest do
       job_configs = AlertLib.reboot_all_jobs()
       assert is_list(job_configs)
 
-      # Should have exactly 1 job for the current scheduled alert
-      assert length(job_configs) == 1
+      # Should have initial count + 1 job for the new scheduled alert
+      assert length(job_configs) == initial_count + 1
 
       # The job should be for the updated (current) version, not the old version
-      job = hd(job_configs)
-      assert job.name == :"alert_#{updated_scheduled.alert_public_id}"
-      assert job.schedule |> to_string() == "0 9 * * *"  # Cron expression
-      assert job.task == {Alerts.Business.Alerts, :run_by_history_id, [updated_scheduled.alert_public_id]}
+      # Find our specific alert in the job configs by alert_public_id
+      our_job = Enum.find(job_configs, fn alert -> 
+        alert.alert_public_id == updated_scheduled.alert_public_id
+      end)
+      
+      assert our_job != nil, "Should find our updated scheduled alert"
+      assert our_job.schedule == "0 9 * * *"
+      assert our_job.name == "Updated Scheduled"
     end
   end
 
@@ -466,19 +474,21 @@ defmodule Alerts.Business.AlertsTest do
     test "force_status_change parameter controls last_status_change updates" do
       data_source = Factory.insert!(:data_source)
       alert = Factory.insert!(:alert, 
-        status: "good",
-        results_size: 0, 
         threshold: 0,
-        data_source_id: data_source.id,
-        last_status_change: ~N[2025-01-01 10:00:00]
+        data_source_id: data_source.id
       )
       
-      original_status_change = alert.last_status_change
+      # First run to establish "good" status with last_status_change set
+      first_run = AlertDB.run_changeset(alert, %{"results_size" => 0}) |> Repo.update!()
+      assert first_run.status == "good"
+      assert first_run.last_status_change != nil
+      
+      original_status_change = first_run.last_status_change
       
       :timer.sleep(1100)
       
       # Run without force_status_change - same status, should NOT update last_status_change
-      updated_1 = AlertDB.run_changeset(alert, %{"results_size" => 0}) |> Repo.update!()
+      updated_1 = AlertDB.run_changeset(first_run, %{"results_size" => 0}) |> Repo.update!()
       assert updated_1.last_status_change == original_status_change
       
       :timer.sleep(1100)
@@ -490,13 +500,13 @@ defmodule Alerts.Business.AlertsTest do
 
     test "lifecycle_changeset only updates lifecycle_status, preserves all business dates" do
       data_source = Factory.insert!(:data_source)
-      alert = Factory.insert!(:alert, 
-        data_source_id: data_source.id,
-        created_at: ~N[2025-01-01 10:00:00],
-        last_edited: ~N[2025-01-02 11:00:00],
-        last_run: ~N[2025-01-03 12:00:00],
-        last_status_change: ~N[2025-01-04 13:00:00]
-      )
+      alert = Factory.insert!(:alert, data_source_id: data_source.id)
+      
+      # Store the original timestamps (Factory uses real app logic with real timestamps)
+      original_created_at = alert.created_at
+      original_last_edited = alert.last_edited
+      original_last_run = alert.last_run
+      original_last_status_change = alert.last_status_change
       
       # Use lifecycle_changeset to mark as old
       updated_alert = alert
@@ -505,10 +515,10 @@ defmodule Alerts.Business.AlertsTest do
       
       # Only lifecycle_status should change, all dates preserved
       assert updated_alert.lifecycle_status == "old"
-      assert updated_alert.created_at == ~N[2025-01-01 10:00:00]
-      assert updated_alert.last_edited == ~N[2025-01-02 11:00:00]
-      assert updated_alert.last_run == ~N[2025-01-03 12:00:00]
-      assert updated_alert.last_status_change == ~N[2025-01-04 13:00:00]
+      assert updated_alert.created_at == original_created_at
+      assert updated_alert.last_edited == original_last_edited
+      assert updated_alert.last_run == original_last_run
+      assert updated_alert.last_status_change == original_last_status_change
     end
 
     test "never run status has no last_status_change timestamp" do

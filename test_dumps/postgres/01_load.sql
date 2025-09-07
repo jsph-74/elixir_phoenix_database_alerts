@@ -1,13 +1,6 @@
 -- Investment Portfolio Database
 -- Comprehensive schema for investment tracking and portfolio management
-
-DROP DATABASE IF EXISTS test;
-CREATE DATABASE test;
-
--- Alerts Test Database
--- Separate database for Phoenix alerts application testing
-DROP DATABASE IF EXISTS alerts_test;
-CREATE DATABASE alerts_test;
+-- Note: Database 'test' is already created by Docker, so we skip DROP/CREATE
 
 \c test;
 

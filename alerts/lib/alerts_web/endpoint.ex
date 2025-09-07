@@ -37,10 +37,8 @@ defmodule AlertsWeb.Endpoint do
     plug Phoenix.Ecto.CheckRepoStatus, otp_app: :alerts
   end
 
-  # SSL redirect for production only
-  if Mix.env() == :prod do
-    plug AlertsWeb.Plugs.SSLRedirect
-  end
+  # SSL redirect when certificates are available
+  plug AlertsWeb.Plugs.SSLRedirect
 
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]

@@ -4,11 +4,17 @@ import Config
 config :alerts, Alerts.Repo,
   username: "postgres",
   password: "postgres",
-  hostname: "alerts_db",
-  database: "alerts_dev",
+  hostname: System.get_env("DATABASE_HOST", "db-dev"),
+  database: System.get_env("DATABASE_NAME") || "alerts_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
+
+# Use SQL Sandbox when running tests in dev environment
+if System.get_env("MIX_TEST") do
+  config :alerts, Alerts.Repo,
+    pool: Ecto.Adapters.SQL.Sandbox
+end
 
 # For development, we disable any cache and enable
 # debugging and code reloading.
@@ -77,9 +83,3 @@ config :phoenix_live_view,
   debug_attributes: true,
   # Enable helpful, but potentially expensive runtime checks
   enable_expensive_runtime_checks: true
-
-# Alerts configuration
-config :alerts, :export_folder, "/files"
-config :alerts, ecto_repos: [Alerts.Repo]
-config :alerts, git_browser: "http://localhost:8080/"
-# Legacy config-based data sources removed - now using database-backed data sources only
