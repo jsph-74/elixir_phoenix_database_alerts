@@ -25,7 +25,7 @@ defmodule EncryptionRotation do
     IO.puts("🔄 Starting encryption key rotation...")
     IO.puts("📊 Using existing database connection...")
     
-    # Read current encryption key from mounted Docker secret
+    # Read current (old) encryption key from mounted Docker secret
     old_key = File.read!("/run/secrets/data_source_encryption_key") |> String.trim()
     IO.puts("✅ Read current encryption key from Docker secret")
 
@@ -65,11 +65,6 @@ defmodule EncryptionRotation do
     results = data_source_results
 
     # Count results
-    successes = Enum.count(results, fn
-      {:ok, _, _, _} -> true
-      _ -> false
-    end)
-
     failures = Enum.count(results, fn
       {:error, _, _, _, _} -> true
       _ -> false

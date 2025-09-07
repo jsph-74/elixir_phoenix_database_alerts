@@ -15,6 +15,7 @@ export default defineConfig({
     baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    ignoreHTTPSErrors: true, // Accept self-signed certificates for dev/test
   },
 
   projects: [

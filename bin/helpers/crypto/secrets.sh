@@ -12,10 +12,8 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/functions.sh"
 echo "🔐 Creating Docker Swarm Secrets ($MIX_ENV -> $KEY_FOLDER)"
 echo "==================================================="
 
-# Check if Docker Swarm is initialized
-if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -q "^active$"; then
-    docker swarm init --advertise-addr 127.0.0.1 >/dev/null 2>&1
-fi
+# Initialize Docker Swarm
+init_docker_swarm
 
 # Get existing secret names
 EXISTING_ENCRYPTION_SECRET=$(./bin/helpers/crypto/get_secret_name.sh "$MIX_ENV" db_encryption_key)
@@ -27,12 +25,12 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # Generate new encryption key
 NEW_DB_ENCRYPTION_KEY=$(openssl rand -base64 32)
-DB_ENCRYPTION_SECRET_NAME="data_source_encryption_key_${TIMESTAMP}"
+DB_ENCRYPTION_SECRET_NAME="data_source_encryption_key_${MIX_ENV}_${TIMESTAMP}"
 echo "$NEW_DB_ENCRYPTION_KEY" | docker secret create "$DB_ENCRYPTION_SECRET_NAME" - >/dev/null
 
 # Save new secret key base as Docker secret
 SECRET_KEY_BASE=$(openssl rand -base64 64)
-SECRET_SECRET_NAME="secret_key_base_${TIMESTAMP}"
+SECRET_SECRET_NAME="secret_key_base_${MIX_ENV}_${TIMESTAMP}"
 echo "$SECRET_KEY_BASE" | docker secret create "$SECRET_SECRET_NAME" - >/dev/null
 
 echo
@@ -48,5 +46,7 @@ if [ -n "$MASTER_PASSWORD_SECRET_NAME" ]; then
     echo -e "${GREEN}✅ Found existing master password secret: $MASTER_PASSWORD_SECRET_NAME${NC}"
 fi
 
-# Export key for rotation scripts
+# Export key and secret names for rotation scripts
 export NEW_DB_ENCRYPTION_KEY
+export NEW_DB_ENCRYPTION_SECRET_NAME="$DB_ENCRYPTION_SECRET_NAME"
+export NEW_SECRET_SECRET_NAME="$SECRET_SECRET_NAME"

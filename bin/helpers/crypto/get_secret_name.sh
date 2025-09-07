@@ -16,13 +16,13 @@ fi
 
 case "$SECRET_TYPE" in
     db_encryption_key)
-        docker secret ls --format "{{.Name}}" | grep "^data_source_encryption_key_" | head -n 1 || echo ""
+        docker secret ls --format "{{.Name}}" | grep "^data_source_encryption_key_${ENV}_" | sort -r | head -n 1 || echo ""
         ;;
     secret_key_base)
-        docker secret ls --format "{{.Name}}" | grep "^secret_key_base_" | head -n 1 || echo ""
+        docker secret ls --format "{{.Name}}" | grep "^secret_key_base_${ENV}_" | sort -r | head -n 1 || echo ""
         ;;
     master_password)
-        docker secret ls --format "{{.Name}}" | grep "^master_password_" | head -n 1 || echo ""
+        docker secret ls --format "{{.Name}}" | grep "^master_password_${ENV}_" | sort -r | head -n 1 || echo ""
         ;;
     *)
         echo "Unknown secret type: $SECRET_TYPE" >&2

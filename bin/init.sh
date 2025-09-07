@@ -48,8 +48,8 @@ fi
 
 # Initialize Docker Swarm and create shared network (before sample databases)
 if [ "$ENV" != "prod" ]; then
-    # Ensure Docker Swarm is initialized
-    docker swarm init --advertise-addr 127.0.0.1 2>/dev/null || true
+    # Initialize Docker Swarm
+    init_docker_swarm
 
     # Create regular bridge network for sample databases (docker-compose compatibility)
     docker network create --driver bridge alerts-shared 2>/dev/null || echo "Network alerts-shared already exists"

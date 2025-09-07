@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { navigateWithAuth } from '../helpers/auth';
 import { TestDatabaseHelper } from '../helpers/database';
 import { AlertTestHelper } from '../helpers/alert-helper';
 
@@ -128,7 +129,7 @@ test.describe('Alert Updates and Delete Tests', () => {
     const currentUrl = alert.page.url();
     
     // Verify alert no longer appears in context listing  
-    await page.goto(`/alerts?context=${alert.context}`);
+    await navigateWithAuth(page, `/alerts?context=${alert.context}`);
     await page.waitForTimeout(1000); // Allow page to load
     
     // Use a more specific selector to avoid false positives

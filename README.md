@@ -266,3 +266,29 @@ SESSION_TIMEOUT_MINUTES=30 ./bin/startup.sh dev
 
 Built with Elixir, Phoenix, Docker, and a focus on secure database monitoring patterns.
 
+---
+
+## 📋 Future Enhancements
+
+**Priority Roadmap:**
+
+1. **📈 History Graphic Representation**
+   - Interactive charts and graphs for alert trends over time
+   - Visual dashboards for alert performance metrics
+   - Historical data visualization and analysis tools
+
+2. **🔐 HashiCorp Vault Integration**
+   - Replace Docker secrets with Vault for enhanced security
+   - Dynamic database credential rotation
+   - Better protection against container compromise scenarios
+
+3. **👥 Multi-Level User Permission System**
+   - Role-based access control (RBAC) for different user types
+   - Granular permissions for alerts, data sources, and system configuration
+   - User management and authentication improvements
+
+4. **🚨 Alert System Integrations**
+   - PagerDuty, Slack, Teams, and email notifications
+   - Webhook support for custom integrations
+   - Escalation policies and notification routing
+

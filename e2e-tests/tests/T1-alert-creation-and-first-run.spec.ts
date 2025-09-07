@@ -71,7 +71,7 @@ test.describe('Alert Creation, Validation and First Run Tests', () => {
     await expect(statusCell).not.toContainText('since');
 
     await alertHelper.findAlertRowInContextListing(alert.context, alert.name);
-    alertHelper.deleteAlertFromAlertDetail()
+    // TEMP: Disabled delete - alertHelper.deleteAlertFromAlertDetail()
   });
 
   test('T13 - alert creation shows proper initial date structure', async ({ page }) => {

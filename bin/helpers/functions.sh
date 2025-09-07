@@ -36,7 +36,6 @@ get_service_name() {
     esac
 }
 
-
 # Get HTTP port for environment
 get_http_port() {
     local env="${1:-dev}"
@@ -74,97 +73,38 @@ get_base_url() {
     echo "${protocol}://localhost:${port}"
 }
 
-# Docker container cleanup function
-docker_cleanup() {
-    print_status "🧹 Cleaning up containers..." $YELLOW
-    docker container prune -f > /dev/null 2>&1 
-}
-
-# Check if Docker Swarm secrets are initialized for environment
-check_swarm_secrets() {
+# Check if container is running for given environment
+check_container_running() {
     local env="${1:-dev}"
-    
-    # Check if Docker Swarm is initialized
-    if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -q active; then
-        print_status "❌ Docker Swarm is not initialized" $RED
-        echo "Please run: ./bin/helpers/crypto/secrets.sh $env"
-        exit 1
-    fi
-
-    # Check if secrets exist in Docker
-    local encryption_secrets=$(docker secret ls --format "{{.Name}}" | grep "^data_source_encryption_key_" | wc -l)
-    local secret_key_secrets=$(docker secret ls --format "{{.Name}}" | grep "^secret_key_base_" | wc -l)
-    
-    if [ "$encryption_secrets" -eq 0 ] || [ "$secret_key_secrets" -eq 0 ]; then
-        print_status "❌ No Docker secrets found" $RED
-        echo "Please run: ./bin/helpers/crypto/secrets.sh $env"
+    if ! docker ps -q -f "name=alerts-${env}_web-${env}" | grep -q .; then
+        print_status "❌ Container alerts-${env}_web-${env} is not running" $RED
+        echo "Start it first: ./bin/startup.sh $env"
         exit 1
     fi
 }
 
-# Get current secret names for environment from Docker
-get_secret_names() {
-    local env="${1:-dev}"
-    
-    # Get the most recent encryption key secret (by timestamp)
-    ENCRYPTION_SECRET=$(docker secret ls --format "{{.Name}}" | grep "^data_source_encryption_key_" | sort -r | head -1)
-    
-    # Get the most recent secret key base secret (by timestamp)  
-    SECRET_KEY_SECRET=$(docker secret ls --format "{{.Name}}" | grep "^secret_key_base_" | sort -r | head -1)
-    
-    if [ -z "$ENCRYPTION_SECRET" ] || [ -z "$SECRET_KEY_SECRET" ]; then
-        print_status "❌ No secrets found for $env environment" $RED
-        echo "Please run: ./bin/helpers/crypto/secrets.sh $env"
-        exit 1
-    fi
-    
-    print_status "📋 Using secrets:" $BLUE
-    echo "  • Encryption: $ENCRYPTION_SECRET"
-    echo "  • Secret Key: $SECRET_KEY_SECRET"
-}
-
-# Deploy application stack with Docker Swarm secrets
-deploy_stack_with_secrets() {
-    local env="${1:-dev}"
-    
-    # Create temporary compose file with current secret names and stack-compatible format
-    local temp_compose="$(mktemp)"
-    trap "rm -f $temp_compose" EXIT
-
-    # Remove container names and profiles that aren't compatible with stack mode, update secret names
-    sed -e "s/source: data_source_encryption_key/source: ${ENCRYPTION_SECRET}/" \
-        -e "s/source: secret_key_base/source: ${SECRET_KEY_SECRET}/" \
-        -e "s/^  data_source_encryption_key:$/  ${ENCRYPTION_SECRET}:/" \
-        -e "s/^  secret_key_base:$/  ${SECRET_KEY_SECRET}:/" \
-        -e "/container_name:/d" \
-        -e "/profiles:/,+1d" \
-        docker-compose.yaml > "$temp_compose"
-
-    print_status "🚀 Deploying application stack..." $BLUE
-    if docker stack deploy -c "$temp_compose" alerts 2>/dev/null; then
-        print_status "✅ Stack deployed successfully!" $GREEN
-    else
-        print_status "❌ Stack deployment failed, trying with compose validation..." $YELLOW
-        echo "Compose file issues:"
-        docker-compose -f "$temp_compose" config --quiet || docker-compose -f "$temp_compose" config
-        exit 1
+# Initialize Docker Swarm if not already active
+init_docker_swarm() {
+    if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -q "^active$"; then
+        docker swarm init --advertise-addr 127.0.0.1 2>/dev/null || true
     fi
 }
 
-# Execute command in running stack service
-exec_in_stack_service() {
+# Wait for container to be fully ready (migrations complete)
+wait_for_container_ready() {
     local env="${1:-dev}"
-    local service_name="web-${env}"
-    shift
+    local port=$(get_http_port "$env")
     
-    # Get the container ID for the stack service
-    local container_id=$(docker ps --filter "name=alerts-${env}_${service_name}" --format "{{.ID}}" | head -1)
+    echo "⏳ Waiting for container to be fully ready..."
+    for i in {1..30}; do
+        if curl -s -f "http://localhost:$port" >/dev/null 2>&1; then
+            echo "✅ Container is ready"
+            return 0
+        fi
+        echo "Waiting for container... ($i/30)"
+        sleep 2
+    done
     
-    if [ -z "$container_id" ]; then
-        print_status "❌ Service alerts-${env}_${service_name} not running" $RED
-        echo "Please start the environment first: ./bin/startup.sh ${env}"
-        exit 1
-    fi
-    
-    docker exec "$container_id" "$@"
+    print_status "❌ Container failed to become ready" $RED
+    exit 1
 }

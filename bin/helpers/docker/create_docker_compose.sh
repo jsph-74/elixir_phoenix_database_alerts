@@ -72,12 +72,12 @@ if [ "$SKIP_MASTER_PASSWORD" = "true" ]; then
     sed -i "" "s/{{MASTER_PASSWORD_MOUNT}}//g" docker-compose-${ENV}.yaml
     sed -i "" "s/{{MASTER_PASSWORD_SECRET}}//g" docker-compose-${ENV}.yaml
 else
-    # Replace master password placeholders with actual content
-    MASTER_PASSWORD_MOUNT="
-      - source: $MASTER_PASSWORD_SECRET_NAME
+    # Replace master password placeholders with actual content (using temp file to handle newlines)
+    MASTER_PASSWORD_MOUNT="\\
+      - source: $MASTER_PASSWORD_SECRET_NAME\\
         target: master_password"
-    MASTER_PASSWORD_SECRET="
-  $MASTER_PASSWORD_SECRET_NAME:
+    MASTER_PASSWORD_SECRET="\\
+  $MASTER_PASSWORD_SECRET_NAME:\\
     external: true"
     
     sed -i "" "s|{{MASTER_PASSWORD_MOUNT}}|$MASTER_PASSWORD_MOUNT|g" docker-compose-${ENV}.yaml

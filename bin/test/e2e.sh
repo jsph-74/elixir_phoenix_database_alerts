@@ -5,6 +5,7 @@ set -e
 # Usage: ./bin/test/e2e.sh [dev|test] [OPTIONS] [grep_pattern]
 # Run Playwright E2E tests against the specified environment
 # OPTIONS: -w NUMBER (number of workers, default: 1)
+#          --password (prompt for master password authentication)
 
 # Source shared functions
 source "$(dirname "$0")/../helpers/functions.sh"
@@ -13,8 +14,38 @@ source "$(dirname "$0")/../helpers/functions.sh"
 MIX_ENV="${1:-test}"
 WORKERS=1
 GREP_PATTERN=""
+MASTER_PASSWORD=""
+USE_MASTER_PASSWORD=false
 
-# Parse options
+# Parse all arguments to find --password and other options
+args=()
+skip_next=false
+for arg in "$@"; do
+    if [ "$skip_next" = true ]; then
+        skip_next=false
+        continue
+    fi
+    
+    case "$arg" in
+        --password)
+            USE_MASTER_PASSWORD=true
+            ;;
+        -w)
+            skip_next=true
+            ;;
+        -w*)
+            WORKERS="${arg#-w}"
+            ;;
+        *)
+            args+=("$arg")
+            ;;
+    esac
+done
+
+# Restore positional parameters without --password
+set -- "${args[@]}"
+
+# Parse remaining options  
 shift  # Remove environment parameter
 while getopts "w:" opt; do
   case $opt in
@@ -22,7 +53,8 @@ while getopts "w:" opt; do
       WORKERS="$OPTARG"
       ;;
     \?)
-      echo "Usage: $0 [dev|test] [-w workers] [grep_pattern]"
+      echo "Usage: $0 [dev|test] [--password] [-w workers] [grep_pattern]"
+      echo "  --password: Prompt for master password authentication"
       echo "  -w: Number of Playwright workers (default: 1)"
       echo "  grep_pattern: Optional pattern to filter tests"
       exit 1
@@ -32,6 +64,19 @@ done
 
 shift $((OPTIND-1))
 GREP_PATTERN="$1"
+
+# Prompt for master password if requested
+if [ "$USE_MASTER_PASSWORD" = true ]; then
+    print_status "🔐 Master password authentication enabled" $BLUE
+    echo -n "Enter master password: "
+    read -s MASTER_PASSWORD
+    echo  # New line after hidden input
+    
+    if [ -z "$MASTER_PASSWORD" ]; then
+        print_status "❌ Master password cannot be empty" $RED
+        exit 1
+    fi
+fi
 
 export MIX_ENV
 
@@ -105,11 +150,19 @@ fi
 echo ""
 print_status "✅ Playwright container ready" $GREEN
 
+# Connect Playwright container to sample database network
+docker network connect alerts-shared "$PLAYWRIGHT_CONTAINER" 2>/dev/null || true
+
 # Run tests inside the Playwright container
+DOCKER_EXEC_CMD="docker exec"
+if [ -n "$MASTER_PASSWORD" ]; then
+    DOCKER_EXEC_CMD="docker exec -e MASTER_PASSWORD='$MASTER_PASSWORD'"
+fi
+
 if [ -n "$GREP_PATTERN" ]; then
-    docker exec "$PLAYWRIGHT_CONTAINER" ./node_modules/.bin/playwright test --grep "$GREP_PATTERN" --workers=$WORKERS --reporter=line
+    eval "$DOCKER_EXEC_CMD \"$PLAYWRIGHT_CONTAINER\" ./node_modules/.bin/playwright test --grep \"$GREP_PATTERN\" --workers=$WORKERS --reporter=line"
 else
-    docker exec "$PLAYWRIGHT_CONTAINER" ./node_modules/.bin/playwright test --workers=$WORKERS --reporter=line
+    eval "$DOCKER_EXEC_CMD \"$PLAYWRIGHT_CONTAINER\" ./node_modules/.bin/playwright test --workers=$WORKERS --reporter=line"
 fi
 
 echo ""

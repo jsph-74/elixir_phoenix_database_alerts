@@ -44,10 +44,8 @@ defmodule Alerts.Business.MasterPassword do
     end
   end
 
-  @doc """
-  Reads the master password hash from Docker secrets.
-  Returns {:ok, hash} or {:error, reason}
-  """
+  # Reads the master password hash from Docker secrets.
+  # Returns {:ok, hash} or {:error, reason}
   defp read_master_password_secret do
     if File.exists?(@master_password_secret_path) do
       case File.read(@master_password_secret_path) do

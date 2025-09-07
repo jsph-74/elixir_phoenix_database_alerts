@@ -37,17 +37,8 @@ fi
 echo "🚀 Starting $ENV environment with Docker Stack..."
 docker stack deploy -c docker-compose-$ENV.yaml alerts-$ENV
 
-# Wait for database to be ready
-echo "⏳ Waiting for database to be ready..."
-
-for i in {1..30}; do
-    if docker run --rm --network alerts-shared postgres:latest pg_isready -h db-$ENV -p 5432 -U postgres > /dev/null 2>&1; then
-        echo "✅ Database is ready"
-        break
-    fi
-    echo "Waiting for database... ($i/30)"
-    sleep 2
-done
+# Wait for application to be fully ready (database up, migrations complete, server started)
+wait_for_container_ready "$ENV"
 
 # For dev/test, join Swarm services to the shared bridge network after deployment
 if [ "$ENV" != "prod" ]; then

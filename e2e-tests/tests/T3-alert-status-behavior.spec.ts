@@ -38,7 +38,8 @@ test.describe('Alert Status Behavior Tests', () => {
     await expect(statusCell).not.toContainText('since');
 
     await alertHelper.findAlertRowInContextListing(alert.context, alert.name);
-    alertHelper.deleteAlertFromAlertDetail()
+    // TEMP: Comment out delete to debug "Test ended" error
+    // alertHelper.deleteAlertFromAlertDetail()
   });
 
   test('T32 - running alert with broken connection shows broken status', async ({ page }) => {
@@ -106,7 +107,8 @@ test.describe('Alert Status Behavior Tests', () => {
     await expect(statusCell).toContainText('under threshold');
     
     await alertHelper.findAlertRowInContextListing(alert.context, alert.name);
-    alertHelper.deleteAlertFromAlertDetail()
+    // TEMP: Comment out delete to debug "Test ended" error
+    // alertHelper.deleteAlertFromAlertDetail()
   });
 
   test('T36 - alert with zero results shows good status', async ({ page }) => {
@@ -128,7 +130,8 @@ test.describe('Alert Status Behavior Tests', () => {
     await expect(statusCell).toContainText('good');
 
     await alertHelper.findAlertRowInContextListing(alert.context, alert.name);
-    alertHelper.deleteAlertFromAlertDetail()
+    // TEMP: Comment out delete to debug "Test ended" error
+    // alertHelper.deleteAlertFromAlertDetail()
   });
 
   test('T36b - alert with results equal to threshold shows bad status', async ({ page }) => {
@@ -149,7 +152,8 @@ test.describe('Alert Status Behavior Tests', () => {
     await expect(statusCell).toContainText('bad');
 
     await alertHelper.findAlertRowInContextListing(alert.context, alert.name);
-    alertHelper.deleteAlertFromAlertDetail()
+    // TEMP: Comment out delete to debug "Test ended" error
+    // alertHelper.deleteAlertFromAlertDetail()
   });
 
   test('T37 - alert with results above threshold shows bad status', async ({ page }) => {
@@ -170,6 +174,7 @@ test.describe('Alert Status Behavior Tests', () => {
     const statusCell = alert.page.locator('tr:has-text("Status") td').last();
     await expect(statusCell).toContainText('bad');
     await alertHelper.findAlertRowInContextListing(alert.context, alert.name);
-    alertHelper.deleteAlertFromAlertDetail()
+    // TEMP: Comment out delete to debug "Test ended" error
+    // alertHelper.deleteAlertFromAlertDetail()
   });
 });

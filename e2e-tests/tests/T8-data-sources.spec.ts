@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { navigateWithAuth } from '../helpers/auth';
 import { TestDatabaseHelper } from '../helpers/database';
 
 test.describe('Data Sources Management E2E', () => {
@@ -16,7 +17,7 @@ test.describe('Data Sources Management E2E', () => {
 
   test('T80 - should create, test, and manage MySQL data source', async ({ page }) => {
     // Step 1: Navigate to new data source form
-    await page.goto('/data_sources/new');
+    await navigateWithAuth(page, '/data_sources/new');
     await expect(page.locator('h1')).toContainText('New Data Source');
 
     // Step 2: Fill out MySQL data source form
@@ -42,7 +43,7 @@ test.describe('Data Sources Management E2E', () => {
   });
 
   test('T81 - should create and test PostgreSQL data source', async ({ page }) => {
-    await page.goto('/data_sources/new');
+    await navigateWithAuth(page, '/data_sources/new');
 
     // Fill PostgreSQL data source form
     const timestamp = Date.now();
@@ -64,7 +65,7 @@ test.describe('Data Sources Management E2E', () => {
   });
 
   test('T82 - should handle invalid connection parameters gracefully', async ({ page }) => {
-    await page.goto('/data_sources/new');
+    await navigateWithAuth(page, '/data_sources/new');
 
     // Fill form with invalid connection details
     await page.fill('#data-source-form_name', 'invalid_test_source');
@@ -83,7 +84,7 @@ test.describe('Data Sources Management E2E', () => {
   });
 
   test('T83 - should validate required fields', async ({ page }) => {
-    await page.goto('/data_sources/new');
+    await navigateWithAuth(page, '/data_sources/new');
 
     // Try to submit empty form
     await page.click('#submit-btn');
@@ -93,7 +94,7 @@ test.describe('Data Sources Management E2E', () => {
   });
 
   test('T84 - should list and navigate data sources', async ({ page }) => {
-    await page.goto('/data_sources');
+    await navigateWithAuth(page, '/data_sources');
 
     // Verify data sources page structure
     await expect(page.locator('h1')).toContainText('Data sources');
@@ -104,12 +105,12 @@ test.describe('Data Sources Management E2E', () => {
     await expect(page.locator('th').filter({ hasText: 'Type' })).toBeVisible();
 
     // Navigate to new data source form (look for any link to new data source page)
-    await page.goto('/data_sources/new');
+    await navigateWithAuth(page, '/data_sources/new');
     await expect(page.locator('h1')).toContainText('New Data Source');
   });
 
   test('T85 - should view data source details', async ({ page }) => {
-    await page.goto('/data_sources');
+    await navigateWithAuth(page, '/data_sources');
     
     // Wait for the page to load and data sources to appear
     await page.waitForSelector('table', { timeout: 10000 });

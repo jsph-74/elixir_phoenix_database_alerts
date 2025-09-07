@@ -50,7 +50,7 @@ fi
 
 # Generate timestamped secret name
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-SECRET_NAME="master_password_${TIMESTAMP}"
+SECRET_NAME="master_password_${ENVIRONMENT}_${TIMESTAMP}"
 
 # Hash password with SHA-256 before storing (security best practice)
 PASSWORD_HASH=$(echo -n "$password" | sha256sum | cut -d' ' -f1)
@@ -60,13 +60,19 @@ print_status "🔑 Creating Docker secret: $SECRET_NAME" $BLUE
 # Create Docker secret
 echo "$PASSWORD_HASH" | docker secret create "$SECRET_NAME" -
 
-# Clean up old master password secrets for this environment
+# Clean up old master password secrets for this environment (skip if in use)
 print_status "🧹 Cleaning up old master password secrets..." $YELLOW
-OLD_SECRETS=$(docker secret ls --format "{{.Name}}" | grep "^master_password_" | grep -v "$SECRET_NAME" || true)
+OLD_SECRETS=$(docker secret ls --format "{{.Name}}" | grep "^master_password_${ENVIRONMENT}_" | grep -v "$SECRET_NAME" || true)
 if [ -n "$OLD_SECRETS" ]; then
     echo "$OLD_SECRETS" | while read -r old_secret; do
-        docker secret rm "$old_secret" 2>/dev/null;
+        if docker secret rm "$old_secret" 2>/dev/null; then
+            echo "  ✅ Removed: $old_secret"
+        else
+            echo "  ⚠️  Skipped (in use): $old_secret"
+        fi
     done
+else
+    echo "  No old secrets to clean up"
 fi
 
 print_status "✅ Master password secret created: $SECRET_NAME" $GREEN

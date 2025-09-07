@@ -11,19 +11,19 @@ source "./bin/helpers/functions.sh"
 
 echo "🔄 Rotating secrets for $ENV environment"
 
-# Get old encryption key from running container
-OLD_KEY=$(docker exec $(docker ps -q -f "name=alerts-${ENV}_web-${ENV}") cat /run/secrets/data_source_encryption_key 2>/dev/null || echo "")
+# Check if container is running
+check_container_running "$ENV"
 
 # Create new secrets
 source ./bin/helpers/crypto/secrets.sh "$ENV"
 
-# Rotate encrypted data in database
-if [ -n "$OLD_KEY" ] && [ -n "$NEW_DB_ENCRYPTION_KEY" ]; then
-    docker exec $(docker ps -q -f "name=alerts-${ENV}_web-${ENV}") mix run --no-halt scripts/rotate_encryption_key.exs "$OLD_KEY" "$NEW_DB_ENCRYPTION_KEY"
+# Rotate encrypted data in database (old key from mounted secret, new key as parameter)
+if [ -n "$NEW_DB_ENCRYPTION_KEY" ]; then
+    docker exec $(docker ps -q -f "name=alerts-${ENV}_web-${ENV}") mix run --no-halt scripts/rotate_encryption_key.exs "$NEW_DB_ENCRYPTION_KEY"
 fi
 
-# Generate compose file and reboot
-./bin/helpers/docker/create_docker_compose.sh "$ENV"
+# Generate compose file with new secret names and reboot
+./bin/helpers/docker/create_docker_compose.sh "$ENV" "$NEW_DB_ENCRYPTION_SECRET_NAME" "$NEW_SECRET_SECRET_NAME"
 ./bin/startup.sh "$ENV" --reboot
 
 echo "✅ Secret rotation complete!"
