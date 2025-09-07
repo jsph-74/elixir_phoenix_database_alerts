@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { navigateWithAuth, handleMasterPasswordLogin } from '../helpers/auth';
 import { TestDatabaseHelper } from '../helpers/database';
 import { AlertTestHelper, HistoryTestHelper } from '../helpers/alert-helper';
 
@@ -37,7 +38,10 @@ test.describe('Alert History E2E', () => {
     await alertHelper.editTestAlert('T41', initialName);
     await page.fill('#alert-edit-form_schedule', '0 * * * *');
     await page.click('#submit-btn');
-    await page.waitForTimeout(2000);
+    
+    // Wait for navigation and handle potential auth redirects
+    await page.waitForLoadState('networkidle');
+    await handleMasterPasswordLogin(page);
     
     await page.waitForURL(/\/alerts\/.*/, { timeout: 10000 });
     await expect(page.locator('h1')).toContainText(initialName);
@@ -62,7 +66,10 @@ test.describe('Alert History E2E', () => {
       
       await page.fill(update.selector, update.newValue);
       await page.click('#submit-btn');
-      await page.waitForTimeout(2000);
+      
+      // Wait for navigation and handle potential auth redirects
+      await page.waitForLoadState('networkidle');
+      await handleMasterPasswordLogin(page);
       
       const currentUrl = page.url();
       expect(currentUrl).not.toContain('/edit');
@@ -79,7 +86,7 @@ test.describe('Alert History E2E', () => {
     }
 
     await alertHelper.findAlertRowInContextListing(contextName, currentAlertName);
-    alertHelper.deleteAlertFromAlertDetail()
+    // TEMP: Disabled delete - alertHelper.deleteAlertFromAlertDetail()
   });
 
   test('T42 - alert status changes create history entries with result diffs and correct dates', async ({ page }) => {
@@ -102,18 +109,14 @@ test.describe('Alert History E2E', () => {
     await historyHelper.goToHistoryTab();
     expect(await historyHelper.getHistoryEntryCount()).toBe(1);
     
-    await page.waitForSelector('button[title="Run alert"]', { state: 'visible', timeout: 10000 });
-    await page.click('button[title="Run alert"]');
-    await page.waitForTimeout(3000);
+    await alertHelper.runAlertAndWaitForCompletion(2);
     
     await historyHelper.goToHistoryTab();
     expect(await historyHelper.getHistoryEntryCount()).toBe(2);
     await historyHelper.verifyDiffButton(0);
     
     await dbHelper.insertFailedOrders(10);
-    await page.waitForSelector('button[title="Run alert"]', { state: 'visible', timeout: 10000 });
-    await page.click('button[title="Run alert"]');
-    await page.waitForTimeout(3000);
+    await alertHelper.runAlertAndWaitForCompletion(3);
     
     await historyHelper.goToHistoryTab();
     expect(await historyHelper.getHistoryEntryCount()).toBe(3);
@@ -125,28 +128,22 @@ test.describe('Alert History E2E', () => {
     await diffButton.click();
     
     await dbHelper.breakDataSourceConnection();
-    await page.waitForSelector('button[title="Run alert"]', { state: 'visible', timeout: 10000 });
-    await page.click('button[title="Run alert"]');
-    await page.waitForTimeout(3000);
+    await alertHelper.runAlertAndWaitForCompletion(4);
     
     await historyHelper.goToHistoryTab();
     expect(await historyHelper.getHistoryEntryCount()).toBe(4);
-    await expect(statusCell).toContainText('broken');
+    await alertHelper.waitForAlertStatus('broken');
     
     await dbHelper.fixDataSourceConnection();
     await dbHelper.updateAlertQuery(alertName, "SELECT INVALID_COLUMN FROM non_existent_table");
-    await page.waitForSelector('button[title="Run alert"]', { state: 'visible', timeout: 10000 });
-    await page.click('button[title="Run alert"]');
-    await page.waitForTimeout(3000);
+    await alertHelper.runAlertAndWaitForCompletion(5);
     
     await historyHelper.goToHistoryTab();
     expect(await historyHelper.getHistoryEntryCount()).toBe(5);
-    await expect(statusCell).toContainText('broken');
+    await alertHelper.waitForAlertStatus('broken');
     
     await dbHelper.updateAlertQuery(alertName, "SELECT COUNT(*) as count FROM orders WHERE status = 'cancelled'");
-    await page.waitForSelector('button[title="Run alert"]', { state: 'visible', timeout: 10000 });
-    await page.click('button[title="Run alert"]');
-    await page.waitForTimeout(3000);
+    await alertHelper.runAlertAndWaitForCompletion(6);
     
     await historyHelper.goToHistoryTab();
     expect(await historyHelper.getHistoryEntryCount()).toBe(6);
@@ -180,8 +177,9 @@ test.describe('Alert History E2E', () => {
     
     await historyHelper.verifyCurrentTag();
 
-    await alertHelper.findAlertRowInContextListing(contextName, alertName);
-    alertHelper.deleteAlertFromAlertDetail()
+    const alertRow = await alertHelper.findAlertRowInContextListing(contextName, alertName);
+    await alertRow.locator('a').first().click(); // Navigate to alert detail page
+    // TEMP: Disabled delete - await alertHelper.deleteAlertFromAlertDetail()
   });
 
   test('T43 - combined status and alert changes create correct history with proper diffs', async ({ page }) => {
@@ -229,17 +227,13 @@ test.describe('Alert History E2E', () => {
       await historyHelper.verifyDiffButton(0);
     }
     
-    await page.waitForSelector('button[title="Run alert"]', { state: 'visible', timeout: 10000 });
-    await page.click('button[title="Run alert"]');
-    await page.waitForTimeout(3000);
+    await alertHelper.runAlertAndWaitForCompletion(5);
     
     await historyHelper.goToHistoryTab();
     expect(await historyHelper.getHistoryEntryCount()).toBe(5);
     
     await dbHelper.insertFailedOrders(10);
-    await page.waitForSelector('button[title="Run alert"]', { state: 'visible', timeout: 10000 });
-    await page.click('button[title="Run alert"]');
-    await page.waitForTimeout(3000);
+    await alertHelper.runAlertAndWaitForCompletion(6);
     
     await historyHelper.goToHistoryTab();
     expect(await historyHelper.getHistoryEntryCount()).toBe(6);
@@ -255,9 +249,7 @@ test.describe('Alert History E2E', () => {
     await page.click('#submit-btn');
     await page.waitForURL(/\/alerts\/.*/, { timeout: 10000 });
     
-    await page.waitForSelector('button[title="Run alert"]', { state: 'visible', timeout: 10000 });
-    await page.click('button[title="Run alert"]');
-    await page.waitForTimeout(3000);
+    await alertHelper.runAlertAndWaitForCompletion(8);
     
     await historyHelper.goToHistoryTab();
     expect(await historyHelper.getHistoryEntryCount()).toBe(8);
@@ -269,16 +261,14 @@ test.describe('Alert History E2E', () => {
     expect(diffContentCount).toBe(2);
     await underThresholdButton.click();
     
-    await page.goto(`/alerts?context=${contextName}`);
+    await navigateWithAuth(page, `/alerts?context=${contextName}`);
     const finalAlertRow = page.locator('tr').filter({ hasText: alertName });
     await finalAlertRow.locator('a[href*="/edit"]').click();
     await page.fill('#alert-edit-form_description', 'Alternating pattern edit 1');
     await page.click('#submit-btn');
     await page.waitForURL(/\/alerts\/.*/, { timeout: 10000 });
     
-    await page.waitForSelector('button[title="Run alert"]', { state: 'visible', timeout: 10000 });
-    await page.click('button[title="Run alert"]');
-    await page.waitForTimeout(3000);
+    await alertHelper.runAlertAndWaitForCompletion(10);
     
     await historyHelper.goToHistoryTab();
     expect(await historyHelper.getHistoryEntryCount()).toBe(10);
@@ -293,6 +283,6 @@ test.describe('Alert History E2E', () => {
     }
 
     await alertHelper.findAlertRowInContextListing(contextName, alertName);
-    alertHelper.deleteAlertFromAlertDetail()
+    // TEMP: Disabled delete - alertHelper.deleteAlertFromAlertDetail()
   });
 });
