@@ -200,42 +200,14 @@ docker stack rm alerts-prod
 
 Add application-level password protection requiring login to access the web interface.
 
-**Setup Master Password:**
 ```bash
-# Set up master password first, then build and start
+# Generate and install master password (auto-regenerates compose and reboots)
 ./bin/helpers/crypto/setup_master_password.sh dev
-./bin/helpers/crypto/secrets.sh dev                    # Create app secrets
-./bin/helpers/docker/create_docker_compose.sh dev      # Generate compose (detects master password)
-./bin/build.sh dev                                      # Build image (first time only)
-./bin/startup.sh dev                                    # Start
-```
-
-**For production:**
-```bash
-# Set up master password and build environment
-./bin/helpers/crypto/setup_master_password.sh prod
-./bin/helpers/crypto/secrets.sh prod
-./bin/helpers/docker/create_docker_compose.sh prod
-./bin/build.sh prod                                     # Build image (first time only)
-./bin/startup.sh prod
 ```
 
 **Requirements:**
-- Docker Swarm initialized (done automatically by secrets.sh)
 - Password must be at least 8 characters
 - Interactive confirmation required
-
-**Remove Master Password:**
-```bash
-# Remove all master password secrets
-docker secret rm $(docker secret ls --format "{{.Name}}" | grep "^master_password_")
-
-# Regenerate compose without master password (will use placeholder)
-./bin/helpers/docker/create_docker_compose.sh dev
-
-# Restart to disable authentication
-./bin/startup.sh dev --reboot
-```
 
 **Configuration:**
 ```bash
