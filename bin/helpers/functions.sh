@@ -108,3 +108,30 @@ wait_for_container_ready() {
     print_status "❌ Container failed to become ready" $RED
     exit 1
 }
+
+# Execute command in a running stack service
+exec_in_stack_service() {
+    local env="${1:-dev}"
+    local service_name=$(get_service_name "$env")
+    local stack_name="alerts-$env"
+    shift
+
+    # Get the first running task ID for the service
+    local task_id=$(docker service ps --filter "desired-state=running" --format "{{.ID}}" "${stack_name}_${service_name}" | head -n1)
+
+    if [ -z "$task_id" ]; then
+        print_status "❌ No running tasks found for service ${stack_name}_${service_name}" $RED
+        exit 1
+    fi
+
+    # Get the container ID from the task
+    local container_id=$(docker inspect --format "{{.Status.ContainerStatus.ContainerID}}" "$task_id" 2>/dev/null)
+
+    if [ -z "$container_id" ]; then
+        print_status "❌ Could not find container for task $task_id" $RED
+        exit 1
+    fi
+
+    echo "🔧 Executing in container: $@"
+    docker exec "$container_id" "$@"
+}

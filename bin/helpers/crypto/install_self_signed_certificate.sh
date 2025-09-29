@@ -17,5 +17,8 @@ exec_in_stack_service "$ENVIRONMENT" ./bin/generate_ssl_cert.sh "$ENVIRONMENT"
 
 echo ""
 echo "✅ SSL certificate generated in container!"
-echo "🚀 Restart the $ENVIRONMENT service to apply SSL configuration:"
-echo "   ./bin/startup.sh $ENVIRONMENT"
+echo "🔄 Restarting $ENVIRONMENT service to apply SSL configuration..."
+
+# Get the script directory to call startup.sh with correct path
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+"$SCRIPT_DIR/startup.sh" "$ENVIRONMENT" --reboot

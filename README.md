@@ -1,242 +1,108 @@
 # Elixir Alerts
 
-A Phoenix application for monitoring database data and generating alerts with encrypted data source credentials. Connect to multiple databases (MySQL, PostgreSQL), create alerts with custom SQL queries, and get notified when thresholds are exceeded. Features encrypted credential storage, master password protection, and full SSL/HTTPS support.
+A Phoenix application for monitoring database data and generating alerts. Connect to multiple databases (MySQL, PostgreSQL), create custom SQL alerts, and get notified when thresholds are exceeded. Features encrypted credential storage and SSL/HTTPS support.
+
+## Quick Start
+
+```bash
+# Development (with sample databases and test data)
+./bin/init.sh dev
+# → http://localhost:4000
+
+# Testing (with sample databases for E2E tests)
+./bin/init.sh test
+# → http://localhost:4002
+
+# Production (clean start, no sample data)
+./bin/init.sh prod
+# → http://localhost:4004
+```
 
 ## Screenshots
 
-### Data Source Management
-Securely manage multiple database connections with encrypted credentials:
+![Data Sources](screenshots/data-sources.png) ![Alerts Dashboard](screenshots/alerts-listing.png)
+![Alert Timeline](screenshots/alert-diff-story.png) ![Alert Details](screenshots/alert-detail.png)
 
-![Data Sources](screenshots/data-sources.png)
+## Environment Details
 
-### Alert Dashboard
-Monitor all your alerts with real-time status updates and context filtering:
+### Development (`dev`)
+- **Includes:** Sample databases (MySQL, PostgreSQL) for testing connections
+- **Seeded:** Sample alerts and data sources for immediate experimentation
+- **SSL:** Optional (`./bin/helpers/crypto/install_self_signed_certificate.sh dev`)
+- **Access:** http://localhost:4000 (HTTP) or https://localhost:4001 (HTTPS)
 
-![Alerts Listing](screenshots/alerts-listing.png)
+### Testing (`test`)
+- **Includes:** Sample databases for E2E test scenarios
+- **Seeded:** Test data for automated testing workflows
+- **Tests:** `./bin/test/backend.sh` and `./bin/test/e2e.sh`
+- **Access:** http://localhost:4002
 
-### Alert Timeline & History
-Track alert changes and results over time with detailed diff visualization:
+### Production (`prod`)
+- **Clean:** No sample databases or seeded data
+- **Data:** Add through web interface only
+- **SSL:** Required for security (self-signed or CA-signed certificates)
+- **Access:** https://localhost:4005 (HTTPS) with HTTP redirect
 
-![Alert Timeline](screenshots/alert-diff-story.png)
+## SSL Configuration (Production)
 
-### Alert Details & Monitoring
-View individual alert status, execution results, and downloadable CSV data:
-
-![Alert Detail](screenshots/alert-detail.png)
-
-## Development Environment
-
-Local development with hot reload and debugging capabilities.
-
-### Setup & Run
-
-**Setup & Start:**
+**Self-signed (testing):**
 ```bash
-# Full setup from scratch (recommended)
-./bin/init.sh dev
-
-# Manual step-by-step (if you need granular control)
-./bin/helpers/crypto/secrets.sh dev                    # Create application secrets
-./bin/helpers/docker/create_docker_compose.sh dev      # Generate compose file
-./bin/build.sh dev                                      # Build Docker image (required first time)
-./bin/startup.sh dev                                    # Start environment
-./bin/helpers/db/seed.sh dev                           # Seed database with sample data
-```
-
-*Note: `./bin/init.sh` automatically handles sample databases, secrets, building, and starting*
-**→ Access at http://localhost:4000**
-
-### With SSL (Optional)
-```bash
-# Generate and install self-signed certificate (stored in container)
-./bin/helpers/crypto/install_self_signed_certificate.sh dev
-
-# Restart to enable SSL (startup script auto-detects certificates)
-./bin/startup.sh dev
-```
-**→ Access at https://localhost:4001 (HTTPS) or http://localhost:4000 (HTTP) - both work independently**
-
-*Note: Self-signed certificates will show browser security warnings - click through to proceed.*
-
-### Secret Rotation (Existing Environment)
-
-Rotate encryption keys and update encrypted data automatically:
-
-```bash
-# Rotate all secrets (encryption key + secret key base + database data)
-./bin/rotate_secrets.sh dev
-
-# Or rotate master password only
-./bin/helpers/crypto/setup_master_password.sh dev
-./bin/helpers/docker/create_docker_compose.sh dev
-./bin/startup.sh dev --reboot
-```
-
-*Note: `rotate_secrets.sh` automatically handles: extracting old key, creating new secrets, rotating encrypted database data, updating compose file, and restarting.*
-
-### Stop Environment
-```bash
-# Stop dev environment
-docker stack rm alerts-dev
-
-# Stop test environment
-docker stack rm alerts-test
-
-# Stop all sample databases
-docker-compose -f docker-compose.sample-dbs.yaml down
-```
-
----
-
-## Test Environment
-
-Automated testing with clean database state and E2E browser tests.
-
-### Setup & Run
-
-**Setup & Start:**
-```bash
-# Full setup from scratch (recommended)
-./bin/init.sh test
-
-# Manual step-by-step (if you need granular control)
-./bin/helpers/crypto/secrets.sh test                   # Create application secrets  
-./bin/helpers/docker/create_docker_compose.sh test     # Generate compose file
-./bin/build.sh test                                     # Build Docker image (required first time)
-./bin/startup.sh test                                   # Start environment
-./bin/helpers/db/seed.sh test                          # Seed database with sample data
-```
-
-*Note: `./bin/init.sh` automatically handles sample databases, secrets, building, and starting*
-**→ Access at http://localhost:4002**
-
-### Run Tests
-
-**Prerequisites:** Test environment must be running first
-```bash
-# Start test environment (if not already running) 
-./bin/init.sh test
-```
-
-**Then run tests:**
-```bash
-# Backend tests (Elixir/Phoenix) - resets DB and runs tests
-./bin/test/backend.sh
-
-# E2E tests (Playwright) - seed DB with sample data and run tests
-./bin/helpers/db/seed.sh test && ./bin/test/e2e.sh
-
-# E2E with specific pattern and workers
-./bin/helpers/db/seed.sh test && ./bin/test/e2e.sh -w 3 "T4"
-```
-
----
-
-## Production Environment
-
-Production-ready deployment with security hardening and SSL/HTTPS.
-
-### Setup & Run
-```bash
-# Full setup from scratch (recommended)
-./bin/init.sh prod
-
-# Manual step-by-step (if you need granular control)
-./bin/helpers/crypto/secrets.sh prod                   # Create application secrets
-./bin/helpers/docker/create_docker_compose.sh prod     # Generate compose file  
-./bin/build.sh prod                                     # Build Docker image (required first time)
-./bin/startup.sh prod                                   # Start environment
-# Note: No seeding in prod - add data through web interface
-```
-
-*Note: `./bin/init.sh` handles secrets, building, and starting (no sample databases in prod)*
-**→ Access at http://localhost:4004**
-
-### SSL Configuration (Required)
-
-**Option 1: Self-signed certificate (testing)**
-```bash
-# Generate and install self-signed certificate (stored in container)
 ./bin/helpers/crypto/install_self_signed_certificate.sh prod
-
-# Optional: Generate with custom domain
-SSL_DOMAIN="yourdomain.com" ./bin/helpers/crypto/install_self_signed_certificate.sh prod
 ```
 
-**Option 2: CA-signed certificate (production)**
+**CA-signed (production):**
 ```bash
-# Get Let's Encrypt certificate (on host)
 sudo certbot certonly --standalone -d yourdomain.com
-
-# Install custom certificate using helper script
 ./bin/helpers/crypto/install_custom_certificate.sh prod \
   /etc/letsencrypt/live/yourdomain.com/fullchain.pem \
   /etc/letsencrypt/live/yourdomain.com/privkey.pem
 ```
 
-**Enable SSL and restart:**
-```bash
-# Start production server (auto-detects SSL certificates)
-./bin/startup.sh prod
-```
-**→ Access at https://localhost:4005 (HTTPS) or http://localhost:4004 (HTTP redirects to HTTPS)**
+## Security Management
 
-### Security Management
+**Secret Rotation:**
 ```bash
-# Rotate all secrets (encryption key + secret key base + database data)
-./bin/rotate_secrets.sh prod
+# Rotate all secrets and encrypted data
+./bin/rotate_secrets.sh <env>
 
-# Or full re-initialization (generates new secrets but doesn't rotate existing data)
-./bin/init.sh prod
+# Master password protection (optional)
+./bin/set_master_password.sh <env>
 ```
 
-### Stop Environment
+**Stop Environment:**
 ```bash
-# Stop production environment
-docker stack rm alerts-prod
+docker stack rm alerts-<env>
 ```
 
-### Master Password Protection (Optional)
+## Independent Scripts
 
-Add application-level password protection requiring login to access the web interface.
+All scripts work with `dev`/`test`/`prod` environments. **Note:** `./bin/test/*` scripts should only be used in dev/test environments.
 
-```bash
-# Generate and install master password (auto-regenerates compose and reboots)
-./bin/helpers/crypto/setup_master_password.sh dev
-```
+**Core Operations:**
+- `./bin/init.sh <env>` - Full environment setup (secrets, build, start)
+- `./bin/startup.sh <env>` - Start environment (use `--reboot` to restart)
+- `./bin/build.sh <env>` - Build Docker images
+- `./bin/stop.sh <env>` - Stop environment and cleanup
+- `./bin/rotate_secrets.sh <env>` - Rotate all secrets and encrypted data
 
-**Requirements:**
-- Password must be at least 8 characters
-- Interactive confirmation required
+**Database & Testing (dev/test environments):**
+- `./bin/helpers/db/seed.sh <env>` - Seed database with sample data
+- `./bin/test/backend.sh` - Run Elixir/Phoenix tests (works with dev/test)
+- `./bin/test/e2e.sh` - Run Playwright E2E tests (works with dev/test)
 
-**Configuration:**
-```bash
-# Set session timeout (default: 10 minutes)  
-SESSION_TIMEOUT_MINUTES=30 ./bin/startup.sh dev
-```
+**Security & Certificates:**
+- `./bin/helpers/crypto/secrets.sh <env>` - Generate application secrets
+- `./bin/helpers/crypto/install_self_signed_certificate.sh <env>` - Install SSL cert
+- `./bin/set_master_password.sh <env>` - Setup app password
 
-**User Experience:**
-- 🔐 Login screen appears when master password is configured
-- 🚪 Logout button in top-right corner when authenticated
-- ⏱️ Automatic session timeout with configurable duration
-- 🔄 Seamless redirect to login when session expires
+**Database Initialization:**
+Database creation and migration happens automatically in `alerts/bin/boot.sh` during container startup:
+- `mix ecto.create --quiet || true` (creates DB if it doesn't exist)
+- `mix ecto.migrate` (runs pending migrations)
 
-**Security Features:**
-- SHA-256 password hashing stored in Docker Swarm secrets
-- Session-based authentication with CSRF protection
-- Configurable session timeout (environment variable)
-- Login screen protection for all routes
-- Secure logout clears all session data
-- Timestamped secret rotation for password updates
+## Credits
 
----
-
-## 👥 Credits
-
-**Project by:** jsph  
-**Engineering Support:** Claude (Anthropic AI Assistant)
-
-Built with Elixir, Phoenix, Docker, and a focus on secure database monitoring patterns.
+**Project:** jsph | **Engineering Support:** Claude (Anthropic AI)
 
 ---
 
