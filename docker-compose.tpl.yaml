@@ -37,9 +37,6 @@ services:
       - type: bind
         source: ./alerts
         target: /app
-      - type: bind
-        source: ./files
-        target: /files
       - type: volume
         source: alerts-elixir-home
         target: /nonexistent
